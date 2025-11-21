@@ -1,36 +1,39 @@
-# Savior  
-### Automatic Form Draft Recovery
+# Savior
 
-Savior est un moteur d’autosave ultra-léger pour les formulaires web.  
-Il capture silencieusement le contenu saisi par l’utilisateur et le restaure automatiquement en cas de fermeture d’onglet, rafraîchissement, erreur ou crash du navigateur.  
-Objectif : empêcher les utilisateurs de perdre ce qu’ils écrivent — sans configuration, sans backend, sans friction.
+**Automatic Form Draft Recovery**
+
+Savior est un moteur d’autosave ultra-léger pour les formulaires web. Il capture silencieusement le contenu saisi par l’utilisateur et le restaure automatiquement en cas de fermeture d’onglet, rafraîchissement, navigation arrière/avant ou crash du navigateur.
+
+🎯 **Objectif :** empêcher les utilisateurs de perdre ce qu’ils écrivent — sans backend, sans configuration lourde, sans friction.
 
 ---
 
 ## 🚀 Fonctionnalités (MVP)
 
-- Sauvegarde automatique via `localStorage`
-- Restauration instantanée au chargement de la page
-- Nettoyage automatique après `submit`
-- Installation en quelques secondes
-- Aucune dépendance, aucun framework requis
-- Fonctionne sur tous les formulaires HTML
+* Sauvegarde automatique via `localStorage`
+* Restauration instantanée au chargement
+* Nettoyage automatique après `submit`
+* Installation en quelques secondes
+* Aucune dépendance
+* Fonctionne avec les formulaires HTML classiques (champs textuels)
 
 ---
 
 ## 📦 Installation
 
-Inclure simplement le script dans votre page :
+Savior fonctionne actuellement comme module ES.
 
-```html
-<script src="savior.js"></script>
+```js
+import { Savior } from './savior.js';
 ```
+
+(Le support `<script src="...">` arrivera avec le bundle UMD.)
 
 ---
 
-## ✨ Utilisation
+## ✨ Utilisation de base
 
-Ajouter l’attribut `data-savior` à un formulaire :
+### 1. Marquer un formulaire
 
 ```html
 <form data-savior="contact-form">
@@ -39,10 +42,12 @@ Ajouter l’attribut `data-savior` à un formulaire :
 </form>
 ```
 
-Activer Savior :
+### 2. Activer Savior
 
 ```html
-<script>
+<script type="module">
+  import { Savior } from './savior.js';
+
   Savior.init({
     selector: 'form[data-savior]'
   });
@@ -53,36 +58,76 @@ C’est tout : le formulaire est maintenant protégé contre la perte de donnée
 
 ---
 
+## ⚙️ Options disponibles
+
+```js
+Savior.init({
+  selector: 'form[data-savior]', // Formulaires à protéger
+  saveDelayMs: 400,              // Débounce avant sauvegarde
+  driver: new Savior.LocalStorageDriver({
+    storageKeyPrefix: 'savior_draft_'
+  })
+});
+```
+
+### Détails
+
+* **selector** : sélectionne les formulaires à protéger. Par défaut : `form[data-savior]`.
+* **saveDelayMs** : délai avant sauvegarde après frappe (ms). Par défaut : `400`.
+* **driver** : mécanisme de stockage. Par défaut : `LocalStorageDriver`.
+
+`Savior.init()` retourne une instance interne (`SaviorCore`).
+
+---
+
 ## 🧩 Architecture (MVP)
 
-Savior se compose de deux éléments :
+### 1. Core autosave
 
-1. **Le moteur d’autosave**
-   - détecte les formulaires
-   - écoute les entrées utilisateur
-   - restaure les brouillons sauvegardés
-   - efface le brouillon lors du `submit`
+* Détecte les formulaires via `selector`
+* Observe les entrées utilisateur (`input`, `change`)
+* Sauvegarde un brouillon après un délai (`saveDelayMs`)
+* Restaure le brouillon au chargement
+* Efface le brouillon lors du `submit`
 
-2. **Le driver de stockage**
-   - MVP : `LocalStorageDriver`
-   - À venir : drivers serveur, hybride et IndexedDB
+### Structure d’un brouillon
+
+```json
+{
+  "formId": "demo-form",
+  "timestampUtc": "2025-11-21T20:42:20.001Z",
+  "fields": {
+    "email": "user@example.com",
+    "message": "Bonjour..."
+  }
+}
+```
+
+### 2. Driver de stockage
+
+MVP : `LocalStorageDriver` utilisant `window.localStorage`.
 
 ---
 
-## 🛠️ À venir
+## ⚠️ Limitations actuelles
 
-- Drivers avancés (serveur, fallback, hybrid)
-- API backend (C#, Node, PHP)
-- Version TypeScript
-- Publication npm
-- Tests automatisés
+* Champs `password` non sauvegardés (sécurité)
+* Champs textuels supportés
+* Support avancé (checkbox, radio, select multiple) à venir
 
 ---
 
-## 📄 Licence  
+## 🛠️ Feuille de route
+
+* Drivers serveur / hybrides / IndexedDB
+* Version TypeScript
+* Bundle UMD + publication npm
+* Tests automatisés
+
+---
+
+## 📄 Licence
+
 À définir.
 
----
-
-Statut : MVP en développement actif.
-
+**Statut :** MVP en développement actif.
