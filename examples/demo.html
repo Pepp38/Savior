@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Savior – Demo</title>
+</head>
+<body>
+  <h1>Savior – Demo</h1>
+
+  <p>Tape du texte, puis rafraîchis la page. Savior doit restaurer ton brouillon.</p>
+
+  <form data-savior="demo-form">
+    <p>
+      <label>
+        Email<br>
+        <input name="email" type="email" autocomplete="off">
+      </label>
+    </p>
+
+    <p>
+      <label>
+        Message<br>
+        <textarea name="message" rows="5" cols="40"></textarea>
+      </label>
+    </p>
+
+    <p>
+      <button type="submit">Envoyer</button>
+    </p>
+  </form>
+
+  <script type="module">
+    import { Savior } from '../savior.js';
+
+    Savior.init({
+      selector: 'form[data-savior]'
+      // saveDelayMs: 400
+    });
+  </script>
+</body>
+</html>
+
