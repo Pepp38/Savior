@@ -2,38 +2,38 @@
 
 **Automatic Form Draft Recovery**
 
-Savior est un moteur d’autosave ultra-léger pour les formulaires web. Il capture silencieusement le contenu saisi par l’utilisateur et le restaure automatiquement en cas de fermeture d’onglet, rafraîchissement, navigation arrière/avant ou crash du navigateur.
+Savior is an ultra-light autosave engine for web forms. It silently captures the user’s input and restores it automatically after a tab close, page refresh, back/forward navigation, or browser crash.
 
-🎯 **Objectif :** empêcher les utilisateurs de perdre ce qu’ils écrivent — sans backend, sans configuration lourde, sans friction.
-
----
-
-## 🚀 Fonctionnalités (MVP)
-
-* Sauvegarde automatique via `localStorage`
-* Restauration instantanée au chargement
-* Nettoyage automatique après `submit`
-* Installation en quelques secondes
-* Aucune dépendance
-* Fonctionne avec les formulaires HTML classiques (champs textuels)
+Goal: prevent users from losing what they write — with no backend, no heavy setup, and zero friction.
 
 ---
 
-## 📦 Installation
+## Features (MVP)
 
-Savior fonctionne actuellement comme module ES.
+- Automatic saving using `localStorage`
+- Instant restoration on page load
+- Auto-cleanup on `submit`
+- Setup in seconds
+- No dependencies
+- Works with standard HTML forms (text-based fields)
+
+---
+
+## Installation
+
+Savior currently ships as an ES module.
 
 ```js
 import { Savior } from './savior.js';
 ```
 
-(Le support `<script src="...">` arrivera avec le bundle UMD.)
+(UMD build with `<script src="...">` support coming soon.)
 
 ---
 
-## ✨ Utilisation de base
+## Basic Usage
 
-### 1. Marquer un formulaire
+### 1. Mark a form
 
 ```html
 <form data-savior="contact-form">
@@ -42,7 +42,7 @@ import { Savior } from './savior.js';
 </form>
 ```
 
-### 2. Activer Savior
+### 2. Activate Savior
 
 ```html
 <script type="module">
@@ -54,43 +54,43 @@ import { Savior } from './savior.js';
 </script>
 ```
 
-C’est tout : le formulaire est maintenant protégé contre la perte de données.
+The form is now protected against data loss.
 
 ---
 
-## ⚙️ Options disponibles
+## Options
 
 ```js
 Savior.init({
-  selector: 'form[data-savior]', // Formulaires à protéger
-  saveDelayMs: 400,              // Débounce avant sauvegarde
+  selector: 'form[data-savior]', // Forms to protect
+  saveDelayMs: 400,              // Debounce delay before saving
   driver: new Savior.LocalStorageDriver({
     storageKeyPrefix: 'savior_draft_'
   })
 });
 ```
 
-### Détails
+### Details
 
-* **selector** : sélectionne les formulaires à protéger. Par défaut : `form[data-savior]`.
-* **saveDelayMs** : délai avant sauvegarde après frappe (ms). Par défaut : `400`.
-* **driver** : mécanisme de stockage. Par défaut : `LocalStorageDriver`.
+- selector: selects which forms to protect. Default: `form[data-savior]`
+- saveDelayMs: delay before saving after user input (ms). Default: 400
+- driver: storage mechanism. Default: LocalStorageDriver
 
-`Savior.init()` retourne une instance interne (`SaviorCore`).
+`Savior.init()` returns an internal instance (`SaviorCore`).
 
 ---
 
-## 🧩 Architecture (MVP)
+## Architecture (MVP)
 
-### 1. Core autosave
+### 1. Autosave Core
 
-* Détecte les formulaires via `selector`
-* Observe les entrées utilisateur (`input`, `change`)
-* Sauvegarde un brouillon après un délai (`saveDelayMs`)
-* Restaure le brouillon au chargement
-* Efface le brouillon lors du `submit`
+- Detects forms using `selector`
+- Listens to user input (`input`, `change`)
+- Saves a draft after a delay (`saveDelayMs`)
+- Restores the draft on page load
+- Clears the draft on `submit`
 
-### Structure d’un brouillon
+### Draft Structure
 
 ```json
 {
@@ -98,36 +98,36 @@ Savior.init({
   "timestampUtc": "2025-11-21T20:42:20.001Z",
   "fields": {
     "email": "user@example.com",
-    "message": "Bonjour..."
+    "message": "Hello..."
   }
 }
 ```
 
-### 2. Driver de stockage
+### 2. Storage Driver
 
-MVP : `LocalStorageDriver` utilisant `window.localStorage`.
-
----
-
-## ⚠️ Limitations actuelles
-
-* Champs `password` non sauvegardés (sécurité)
-* Champs textuels supportés
-* Support avancé (checkbox, radio, select multiple) à venir
+MVP driver: LocalStorageDriver using `window.localStorage`.
 
 ---
 
-## 🛠️ Feuille de route
+## Current Limitations
 
-* Drivers serveur / hybrides / IndexedDB
-* Version TypeScript
-* Bundle UMD + publication npm
-* Tests automatisés
+- password fields are not saved (security)
+- Text-based fields fully supported
+- Advanced support (checkbox, radio, select multiple) coming soon
 
 ---
 
-## 📄 Licence
+## Roadmap
 
-À définir.
+- Server / hybrid / IndexedDB drivers
+- TypeScript version
+- UMD bundle + npm release
+- Automated tests
 
-**Statut :** MVP en développement actif.
+---
+
+## License
+
+To be defined.
+
+Status: MVP under active development.
