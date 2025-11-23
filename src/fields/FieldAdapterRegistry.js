@@ -1,15 +1,16 @@
 // src/fields/FieldAdapterRegistry.js
 import { TextFieldAdapter } from './TextFieldAdapter.js';
-// Tu ajouteras d'autres adapters ici plus tard
-// import { CheckboxFieldAdapter } from './CheckboxFieldAdapter.js';
-// import { RadioFieldAdapter } from './RadioFieldAdapter.js';
-// import { SelectFieldAdapter } from './SelectFieldAdapter.js';
+import { CheckboxFieldAdapter } from './CheckboxFieldAdapter.js';
+import { RadioFieldAdapter } from './RadioFieldAdapter.js';
+import { SelectFieldAdapter } from './SelectFieldAdapter.js';
+import { ValueFieldAdapter } from './ValueFieldAdapter.js';
 
 const defaultAdapters = [
   new TextFieldAdapter(),
-  // new CheckboxFieldAdapter(),
-  // new RadioFieldAdapter(),
-  // new SelectFieldAdapter(),
+  new CheckboxFieldAdapter(),
+  new RadioFieldAdapter(),
+  new SelectFieldAdapter(),
+  new ValueFieldAdapter()
 ];
 
 /**

@@ -88,12 +88,20 @@ export class SaviorCore {
       const fieldName = element.name;
       if (!fieldName) continue;
 
+      // On ne sauvegarde pas les mots de passe
       if (element.type === 'password') continue;
 
       const adapter = getFieldAdapterForElement(element);
       if (!adapter) continue;
 
-      fields[fieldName] = adapter.readValue(element);
+      const value = adapter.readValue(element);
+
+      // Convention: undefined = "rien à sauver" (utile pour les radios non cochées)
+      if (value === undefined) {
+        continue;
+      }
+
+      fields[fieldName] = value;
     }
 
     const draft = {

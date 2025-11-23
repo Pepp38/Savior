@@ -1,28 +1,306 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+  <style>
+  /* Global layout */
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #102543;           /* bleu foncé, moins "noir" */
+    color: #E9EEF4;               /* texte global clair */
+    margin: 0;
+    padding: 2rem;
+    line-height: 1.5;
+  }
+
+  h1 {
+    text-align: center;
+    color: #E9EEF4;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+  }
+
+  /* Cards (fieldsets) */
+  fieldset {
+    border: 1px solid #C3CFDD;    /* bordure claire, bleutée */
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    background: #418beb2c;          /* card très claire, légèrement bleutée */
+    color: #ffffffdd;               /* texte plus foncé à l'intérieur des cards */
+  }
+
+  legend {
+    padding: 0 0.4rem;
+    font-weight: 600;
+    color: #fdf000;               
+  }
+  fieldset p {
+    margin-bottom: 1rem;
+  }
+
+  /* Inputs */
+  input,
+  textarea,
+  select {
+    width: 100%;
+    max-width: 420px;
+    padding: 0.45rem 0.6rem;
+    margin-top: 0.3rem;
+    background: #FFFFFF;          /* fond blanc comme tu le veux */
+    color: #0C161D;               /* texte sombre */
+    border: 1px solid #C3CFDD;    /* bordure claire */
+    border-radius: 4px;
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    border-color: #1B2A38;        /* bleu secondaire en focus */
+    box-shadow: 0 0 0 1px #1B2A38;
+  }
+
+  /* Submit button */
+  button[type="submit"] {
+    background: #1B2A38;          /* bouton bleu foncé */
+    color: #FFFFFF;
+    border: none;
+    padding: 0.6rem 1.4rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 1rem;
+  }
+
+  button[type="submit"]:hover {
+    background: #223449;
+  }
+
+  button[type="submit"]:active {
+    background: #152131;
+  }
+</style>
+
   <meta charset="utf-8">
   <title>Savior – Demo</title>
 </head>
 <body>
   <h1>Savior – Demo</h1>
 
-  <p>Write some text, then refresh the page. Savior should restore your draft.</p>
+  <p>
+    Write in the fields below, toggle some controls, then refresh the page.<br>
+    Savior should restore the supported fields as we add adapters.
+  </p>
 
   <form data-savior="demo-form">
-    <p>
-      <label>
-        Email<br>
-        <input name="email" type="email" autocomplete="off">
-      </label>
-    </p>
+    <!-- Text-like fields -->
+    <fieldset>
+      <legend>Text fields</legend>
 
-    <p>
-      <label>
-        Message<br>
-        <textarea name="message" rows="5" cols="40"></textarea>
-      </label>
-    </p>
+      <p>
+        <label>
+          Text<br>
+          <input name="text" type="text" autocomplete="off">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Email<br>
+          <input name="email" type="email" autocomplete="off">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Search<br>
+          <input name="search" type="search" autocomplete="off">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          URL<br>
+          <input name="url" type="url" autocomplete="off">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Telephone<br>
+          <input name="tel" type="tel" autocomplete="off">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Message (textarea)<br>
+          <textarea name="message" rows="4" cols="40"></textarea>
+        </label>
+      </p>
+    </fieldset>
+
+    <!-- Checkbox -->
+    <fieldset>
+      <legend>Checkbox</legend>
+
+      <p>
+        <label>
+          Subscribe to newsletter
+          <input name="subscribe" type="checkbox">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Accept terms
+          <input name="acceptTerms" type="checkbox">
+        </label>
+      </p>
+    </fieldset>
+
+    <!-- Radio -->
+    <fieldset>
+      <legend>Radio buttons</legend>
+
+      <p>Preferred contact method:</p>
+
+      <p>
+        <label>
+          <input type="radio" name="contactMethod" value="email">
+          Email
+        </label>
+      </p>
+
+      <p>
+        <label>
+          <input type="radio" name="contactMethod" value="phone">
+          Phone
+        </label>
+      </p>
+
+      <p>
+        <label>
+          <input type="radio" name="contactMethod" value="none">
+          None
+        </label>
+      </p>
+    </fieldset>
+
+    <!-- Select -->
+    <fieldset>
+      <legend>Select</legend>
+
+      <p>
+        <label>
+          Single select (country)<br>
+          <select name="country">
+            <option value="">-- Choose --</option>
+            <option value="ca">Canada</option>
+            <option value="us">United States</option>
+            <option value="fr">France</option>
+          </select>
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Multi select (interests)<br>
+          <select name="interests" multiple size="4">
+            <option value="frontend">Frontend</option>
+            <option value="backend">Backend</option>
+            <option value="devops">DevOps</option>
+            <option value="design">Design</option>
+          </select>
+        </label>
+      </p>
+    </fieldset>
+
+    <!-- Number / Range / Date / Time -->
+    <fieldset>
+      <legend>Number / Range / Date / Time</legend>
+
+      <p>
+        <label>
+          Age (number)<br>
+          <input name="age" type="number" min="0" max="120">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Satisfaction (range)<br>
+          <input name="satisfaction" type="range" min="0" max="10">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Date<br>
+          <input name="date" type="date">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Time<br>
+          <input name="time" type="time">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Date &amp; time (local)<br>
+          <input name="datetimeLocal" type="datetime-local">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Month<br>
+          <input name="month" type="month">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          Week<br>
+          <input name="week" type="week">
+        </label>
+      </p>
+    </fieldset>
+
+    <!-- Color -->
+    <fieldset>
+      <legend>Color</legend>
+
+      <p>
+        <label>
+          Favorite color<br>
+          <input name="favoriteColor" type="color" value="#8C5A2B">
+        </label>
+      </p>
+    </fieldset>
+
+    <!-- Fields not meant to be saved -->
+    <fieldset>
+      <legend>Fields not saved by Savior (for now)</legend>
+
+      <p>
+        <label>
+          Password (will NOT be saved)<br>
+          <input name="password" type="password" autocomplete="off">
+        </label>
+      </p>
+
+      <p>
+        <label>
+          File (cannot be restored programmatically)<br>
+          <input name="resume" type="file">
+        </label>
+      </p>
+    </fieldset>
 
     <p>
       <button type="submit">Envoyer</button>
@@ -39,4 +317,3 @@
   </script>
 </body>
 </html>
-
