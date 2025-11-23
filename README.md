@@ -22,7 +22,7 @@ Goal: prevent users from losing what they write — no backend, no setup frictio
 ## Next upgrade
 
 - Cleanup of LocalStorageDriver
-- - IndexedDB / hybrid drivers
+- IndexedDB / hybrid drivers
 
 ---
 
