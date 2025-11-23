@@ -1,7 +1,12 @@
-// Core logic for Savior (debounce, tracking fields, restore, etc.)
-// Storage mechanism will be provided via a driver.
+// src/core/savior-core.js
+
+import { getFieldAdapterForElement } from '../fields/FieldAdapterRegistry.js';
+
 // Core autosave logic for Savior.
-// Depends on a driver exposing: save(formId, draft), load(formId), clear(formId).
+// Depends on a driver exposing:
+//   save(formId, draft),
+//   load(formId),
+//   clear(formId)
 
 export class SaviorCore {
   constructor(options) {
@@ -18,7 +23,7 @@ export class SaviorCore {
   attachToForm(formElement) {
     const formId = this.getFormId(formElement);
     if (!formId) {
-      console.warn('[Savior] Form without data-savior or id, skipping.', formElement);
+      console.warn('[Savior] Form without data-savior or id — skipping.', formElement);
       return;
     }
 
@@ -40,14 +45,19 @@ export class SaviorCore {
     if (!storedDraft || !storedDraft.fields) return;
 
     const elements = formElement.elements;
-    for (let index = 0; index < elements.length; index++) {
-      const element = elements[index];
+
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i];
       const fieldName = element.name;
       if (!fieldName) continue;
 
-      if (Object.prototype.hasOwnProperty.call(storedDraft.fields, fieldName)) {
-        element.value = storedDraft.fields[fieldName];
-      }
+      if (!(fieldName in storedDraft.fields)) continue;
+
+      const adapter = getFieldAdapterForElement(element);
+      if (!adapter) continue;
+
+      const savedValue = storedDraft.fields[fieldName];
+      adapter.writeValue(element, savedValue);
     }
   }
 
@@ -56,10 +66,10 @@ export class SaviorCore {
 
     const scheduleSave = () => {
       if (saveTimeoutId !== null) {
-        window.clearTimeout(saveTimeoutId);
+        clearTimeout(saveTimeoutId);
       }
 
-      saveTimeoutId = window.setTimeout(() => {
+      saveTimeoutId = setTimeout(() => {
         this.saveForm(formElement, formId);
         saveTimeoutId = null;
       }, this.saveDelayMs);
@@ -73,21 +83,31 @@ export class SaviorCore {
     const fields = {};
     const elements = formElement.elements;
 
-    for (let index = 0; index < elements.length; index++) {
-      const element = elements[index];
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i];
       const fieldName = element.name;
       if (!fieldName) continue;
 
       // On ne sauvegarde pas les mots de passe
       if (element.type === 'password') continue;
 
-      fields[fieldName] = element.value;
+      const adapter = getFieldAdapterForElement(element);
+      if (!adapter) continue;
+
+      const value = adapter.readValue(element);
+
+      // Convention: undefined = "rien à sauver" (utile pour les radios non cochées)
+      if (value === undefined) {
+        continue;
+      }
+
+      fields[fieldName] = value;
     }
 
     const draft = {
-      formId: formId,
+      formId,
       timestampUtc: new Date().toISOString(),
-      fields: fields
+      fields
     };
 
     this.driver.save(formId, draft);
