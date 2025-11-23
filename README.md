@@ -9,7 +9,7 @@
 Savior is a lightweight autosave engine for web forms.  
 It silently captures the user’s input and restores it after a tab close, page refresh, back/forward navigation, or browser crash.
 
-Goal: keep users from losing what they write — no backend, no heavy setup, no friction.
+Goal: keep users from losing what they write, no backend, no heavy setup, no friction.
 
 ---
 
@@ -26,7 +26,7 @@ Goal: keep users from losing what they write — no backend, no heavy setup, no 
 I kept losing text in forms while working on small demos and prototypes.  
 Tabs closed. Pages reloaded. Everything disappeared.
 
-I wanted something simple and predictable — so I built it.
+I wanted something simple and predictable => so I built it.
 
 ---
 
