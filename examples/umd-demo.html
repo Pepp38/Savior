@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Savior UMD Demo</title>
+</head>
+<body>
+  <form data-savior="umd-demo-form">
+    <label>
+      Name
+      <input type="text" name="name">
+    </label>
+    <button type="submit">Submit</button>
+  </form>
+
+  <script src="../dist/savior.umd.js"></script>
+  <script>
+    console.log('Global Savior =', window.Savior); 
+    Savior.init();
+  </script>
+</body>
+</html>

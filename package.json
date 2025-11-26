@@ -1,0 +1,44 @@
+{
+  "name": "savior",
+  "version": "0.2.0",
+  "description": "Ultra-light automatic form draft recovery for web forms.",
+  "type": "module",
+  "main": "dist/savior.umd.js",
+  "module": "savior.js",
+  "exports": {
+    ".": {
+      "import": "./savior.js",
+      "require": "./dist/savior.umd.js"
+    }
+  },
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "savior.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "autosave",
+    "forms",
+    "draft",
+    "localStorage",
+    "javascript",
+    "frontend"
+  ],
+  "author": "PLC Creates",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pepp38/Savior.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Pepp38/Savior/issues"
+  },
+  "homepage": "https://github.com/Pepp38/Savior#readme",
+  "devDependencies": {
+    "rollup": "^4.0.0"
+  }
+}

@@ -12,21 +12,34 @@ export class SaviorCore {
   constructor(options) {
     this.formSelector = options.selector || 'form[data-savior]';
     this.driver = options.driver;
-    this.saveDelayMs = options.saveDelayMs || 400;
+    this.saveDelayMs = options.saveDelayMs ?? 400;
+    this.debug = options.debug ?? false;
+  }
+
+  logDebug(...args) {
+    if (!this.debug) return;
+    console.log('[Savior]', ...args);
+  }
+
+  logWarn(...args) {
+    if (!this.debug) return;
+    console.warn('[Savior]', ...args);
   }
 
   init() {
     const forms = document.querySelectorAll(this.formSelector);
+    this.logDebug(`Initializing on selector "${this.formSelector}", found ${forms.length} form(s).`);
     forms.forEach(formElement => this.attachToForm(formElement));
   }
 
   attachToForm(formElement) {
     const formId = this.getFormId(formElement);
     if (!formId) {
-      console.warn('[Savior] Form without data-savior or id — skipping.', formElement);
+      this.logWarn('Form without data-savior or id — skipping.', formElement);
       return;
     }
 
+    this.logDebug(`Attaching to form "${formId}".`);
     this.restoreForm(formElement, formId);
     this.wireInputEvents(formElement, formId);
     this.wireSubmitEvent(formElement, formId);
@@ -42,7 +55,12 @@ export class SaviorCore {
 
   restoreForm(formElement, formId) {
     const storedDraft = this.driver.load(formId);
-    if (!storedDraft || !storedDraft.fields) return;
+    if (!storedDraft || !storedDraft.fields) {
+      this.logDebug(`No draft found for form "${formId}".`);
+      return;
+    }
+
+    this.logDebug(`Restoring draft for form "${formId}".`, storedDraft);
 
     const elements = formElement.elements;
 
@@ -70,6 +88,7 @@ export class SaviorCore {
       }
 
       saveTimeoutId = setTimeout(() => {
+        this.logDebug(`Saving draft for form "${formId}" (debounced).`);
         this.saveForm(formElement, formId);
         saveTimeoutId = null;
       }, this.saveDelayMs);
@@ -110,11 +129,13 @@ export class SaviorCore {
       fields
     };
 
+    this.logDebug(`Persisting draft for form "${formId}".`, draft);
     this.driver.save(formId, draft);
   }
 
   wireSubmitEvent(formElement, formId) {
     formElement.addEventListener('submit', () => {
+      this.logDebug(`Clearing draft for form "${formId}" on submit.`);
       this.driver.clear(formId);
     });
   }

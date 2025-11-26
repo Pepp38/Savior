@@ -93,7 +93,7 @@
     Savior should restore the supported fields as we add adapters.
   </p>
 
-  <form data-savior="demo-form">
+  <form data-savior="full-demo-form">
     <!-- Text-like fields -->
     <fieldset>
       <legend>Text fields</legend>
@@ -307,13 +307,15 @@
     </p>
   </form>
 
-  <script type="module">
-    import { Savior } from '../savior.js';
+<script type="module">
+  import Savior from '../savior.js';
 
-    Savior.init({
-      selector: 'form[data-savior]'
-      // saveDelayMs: 400
-    });
-  </script>
+  Savior.init({
+    selector: 'form[data-savior]',
+    debug: true
+  });
+</script>
+
+  
 </body>
 </html>
