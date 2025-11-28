@@ -326,21 +326,34 @@
     constructor(options) {
       this.formSelector = options.selector || 'form[data-savior]';
       this.driver = options.driver;
-      this.saveDelayMs = options.saveDelayMs || 400;
+      this.saveDelayMs = options.saveDelayMs ?? 400;
+      this.debug = options.debug ?? false;
+    }
+
+    logDebug(...args) {
+      if (!this.debug) return;
+      console.log('[Savior]', ...args);
+    }
+
+    logWarn(...args) {
+      if (!this.debug) return;
+      console.warn('[Savior]', ...args);
     }
 
     init() {
       const forms = document.querySelectorAll(this.formSelector);
+      this.logDebug(`Initializing on selector "${this.formSelector}", found ${forms.length} form(s).`);
       forms.forEach(formElement => this.attachToForm(formElement));
     }
 
     attachToForm(formElement) {
       const formId = this.getFormId(formElement);
       if (!formId) {
-        console.warn('[Savior] Form without data-savior or id — skipping.', formElement);
+        this.logWarn('Form without data-savior or id — skipping.', formElement);
         return;
       }
 
+      this.logDebug(`Attaching to form "${formId}".`);
       this.restoreForm(formElement, formId);
       this.wireInputEvents(formElement, formId);
       this.wireSubmitEvent(formElement, formId);
@@ -356,7 +369,12 @@
 
     restoreForm(formElement, formId) {
       const storedDraft = this.driver.load(formId);
-      if (!storedDraft || !storedDraft.fields) return;
+      if (!storedDraft || !storedDraft.fields) {
+        this.logDebug(`No draft found for form "${formId}".`);
+        return;
+      }
+
+      this.logDebug(`Restoring draft for form "${formId}".`, storedDraft);
 
       const elements = formElement.elements;
 
@@ -384,6 +402,7 @@
         }
 
         saveTimeoutId = setTimeout(() => {
+          this.logDebug(`Saving draft for form "${formId}" (debounced).`);
           this.saveForm(formElement, formId);
           saveTimeoutId = null;
         }, this.saveDelayMs);
@@ -424,11 +443,13 @@
         fields
       };
 
+      this.logDebug(`Persisting draft for form "${formId}".`, draft);
       this.driver.save(formId, draft);
     }
 
     wireSubmitEvent(formElement, formId) {
       formElement.addEventListener('submit', () => {
+        this.logDebug(`Clearing draft for form "${formId}" on submit.`);
         this.driver.clear(formId);
       });
     }
@@ -444,6 +465,10 @@
 
     checkStorageAvailable() {
       try {
+        if (typeof window === 'undefined' || !window.localStorage) {
+          return false;
+        }
+
         const testKey = '__savior_test__';
         window.localStorage.setItem(testKey, '1');
         window.localStorage.removeItem(testKey);
@@ -460,6 +485,7 @@
 
     save(formId, draft) {
       if (!this.isStorageAvailable) return;
+
       try {
         const serializedDraft = JSON.stringify(draft);
         window.localStorage.setItem(this.getStorageKey(formId), serializedDraft);
@@ -470,9 +496,11 @@
 
     load(formId) {
       if (!this.isStorageAvailable) return null;
+
       try {
         const raw = window.localStorage.getItem(this.getStorageKey(formId));
         if (!raw) return null;
+
         return JSON.parse(raw);
       } catch (error) {
         console.warn('[Savior] Failed to load draft:', error);
@@ -482,6 +510,7 @@
 
     clear(formId) {
       if (!this.isStorageAvailable) return;
+
       try {
         window.localStorage.removeItem(this.getStorageKey(formId));
       } catch (error) {
@@ -490,15 +519,49 @@
     }
   }
 
+  function isLocalStorageSupported() {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) {
+        return false;
+      }
+
+      const testKey = '__savior_support_test__';
+      window.localStorage.setItem(testKey, '1');
+      window.localStorage.removeItem(testKey);
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   const Savior = {
+    /**
+     * Check if the current runtime can support Savior safely.
+     * @returns {boolean}
+     */
+    checkSupport() {
+      return isLocalStorageSupported();
+    },
+
     /**
      * Initialise Savior sur les formulaires ciblés.
      * @param {Object} options
      * @param {string} [options.selector] - Sélecteur des formulaires à protéger.
      * @param {number} [options.saveDelayMs] - Délai avant save (debounce).
      * @param {LocalStorageDriver} [options.driver] - Driver de stockage.
+     * @param {boolean} [options.debug] - Active les logs de debug.
      */
     init(options = {}) {
+      if (!Savior.checkSupport()) {
+        if (options.debug) {
+          console.warn(
+            '[Savior] Environment does not support required storage APIs. Initialization skipped.'
+          );
+        }
+        return null;
+      }
+
       const driver = options.driver || new LocalStorageDriver();
 
       const core = new SaviorCore({
