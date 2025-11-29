@@ -1,5 +1,14 @@
 // Default driver using window.localStorage for persistence.
 
+// Internal safe JSON parser for driver use
+function safeParse(raw) {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 export class LocalStorageDriver {
   constructor(options = {}) {
     this.storageKeyPrefix = options.storageKeyPrefix || 'savior_draft_';
@@ -44,7 +53,7 @@ export class LocalStorageDriver {
       const raw = window.localStorage.getItem(this.getStorageKey(formId));
       if (!raw) return null;
 
-      return JSON.parse(raw);
+      return safeParse(raw);
     } catch (error) {
       console.warn('[Savior] Failed to load draft:', error);
       return null;
