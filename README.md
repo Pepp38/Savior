@@ -7,81 +7,38 @@
 
 **Automatic Form Draft Recovery**
 
-Savior is an ultra-light autosave engine for web forms.  
-It silently captures user input and restores it automatically after a tab close, page refresh, navigation, or browser crash.
+Savior is a tiny, dependency-free autosave engine for web forms.\
+It silently captures user input and restores it after a tab close, page
+refresh, navigation, or browser crash.
 
-Goal: prevent users from losing what they write — no backend, no setup friction.
+Goal: prevent users from losing what they write --- no backend, no
+account, no setup friction.
 
----
+------------------------------------------------------------------------
 
-## Currently working on
+## Features
 
-- Extended field support (checkbox, radio, select-multiple)
-- Internal FieldAdapter system
+-   **Autosave (debounced, 400 ms by default)**\
+-   **Automatic draft restore** after refresh, crash, or navigation\
+-   **Clean-up on submit** (no leftover data)\
+-   **No exceptions** when storage is full or unavailable\
+-   **JSON corruption protection**\
+-   **Support check** via `Savior.checkSupport()`\
+-   **LocalStorage driver included**\
+-   Zero dependencies, framework-agnostic\
+-   ESM and UMD builds included
 
-## Next upgrade
-
-- Cleanup of LocalStorageDriver
-- IndexedDB / hybrid drivers
-
----
-
-## Badges
-
-![version](https://img.shields.io/badge/version-0.1.0-1B2A38?labelColor=0C161D)
-![status](https://img.shields.io/badge/status-MVP%20active-1B2A38?labelColor=0C161D)
-![built](https://img.shields.io/badge/built%20by-PLC%20Creates-1B2A38?labelColor=0C161D)
-
----
-
-## Why I built this
-
-I kept losing text in forms while working on small demos and prototypes.  
-Tabs closed. Pages reloaded. Everything disappeared.
-
-I wanted something simple and predictable — so I built it.
-
----
-
-## Features (MVP)
-
-- Automatic saving using `localStorage`
-- Instant restoration on page load
-- Auto-cleanup on `submit`
-- Setup in seconds
-- No dependencies  
-- Works with standard HTML forms (text-based fields)
-
----
+------------------------------------------------------------------------
 
 ## Installation
 
-Savior ships as an ES module.
+Savior ships as both **ESM** and **UMD**.
 
-```js
-import { Savior } from './savior.js';
-```
+### ESM
 
-(UMD build coming soon.)
-
----
-
-## Basic Usage
-
-### 1. Mark a form
-
-```html
-<form data-savior="contact-form">
-  <input name="email" />
-  <textarea name="message"></textarea>
-</form>
-```
-
-### 2. Activate Savior
-
-```html
+``` html
 <script type="module">
-  import { Savior } from './savior.js';
+  import Savior from './savior.js';
 
   Savior.init({
     selector: 'form[data-savior]'
@@ -89,92 +46,151 @@ import { Savior } from './savior.js';
 </script>
 ```
 
-Your form is now protected against data loss.
+### UMD
 
----
+``` html
+<script src="./dist/savior.umd.js"></script>
+<script>
+  Savior.init({
+    selector: 'form[data-savior]'
+  });
+</script>
+```
 
-## Options
+------------------------------------------------------------------------
 
-```js
+## Usage
+
+### Marking forms
+
+``` html
+<form data-savior="contact-form">
+  <input type="text" name="name">
+  <input type="email" name="email">
+  <textarea name="message"></textarea>
+  <button type="submit">Send</button>
+</form>
+```
+
+Initialize Savior:
+
+``` html
+<script type="module">
+  import Savior from './savior.js';
+
+  Savior.init(); // uses selector "form[data-savior]"
+</script>
+```
+
+Custom selector:
+
+``` js
 Savior.init({
-  selector: 'form[data-savior]', // Forms to protect
-  saveDelayMs: 400,              // Debounce delay before saving
-  driver: new Savior.LocalStorageDriver({
-    storageKeyPrefix: 'savior_draft_'
-  })
+  selector: 'form.autosave'
 });
 ```
 
-### Details
+------------------------------------------------------------------------
 
-- **selector** — forms to protect (default: `form[data-savior]`)
-- **saveDelayMs** — delay before saving after user input (default: 400ms)
-- **driver** — storage mechanism (default: LocalStorageDriver)
+## What gets saved?
 
-`Savior.init()` returns the internal core instance.
+-   text-like inputs\
+-   textarea\
+-   select\
+-   checkboxes\
+-   radio groups
 
----
+Savior stores drafts per form in `localStorage` and restores them
+automatically.
 
-## Architecture (MVP)
+------------------------------------------------------------------------
 
-### Autosave Core
+## When does it clear drafts?
 
-- Detects forms  
-- Listens to `input` / `change`  
-- Saves draft after a delay  
-- Restores on page load  
-- Clears on submit  
+On `submit`, Savior clears the stored draft for that form.
 
-### Draft Structure
+------------------------------------------------------------------------
 
-```json
-{
-  "formId": "demo-form",
-  "timestampUtc": "2025-11-21T20:42:20.001Z",
-  "fields": {
-    "email": "user@example.com",
-    "message": "Hello..."
-  }
-}
-```
+## API
 
-### Storage Driver
+### `Savior.checkSupport()`
 
-- MVP: `LocalStorageDriver` using `window.localStorage`.
+Returns `true` if autosave is supported.
 
----
+### `Savior.init(options)`
 
-## Current Limitations
+Options:
 
-- Password fields are not saved  
-- Advanced field support (checkbox, radio, select-multiple) missing
+  Option          Type      Default               Description
+  --------------- --------- --------------------- ----------------
+  `selector`      string    `form[data-savior]`   CSS selector
+  `driver`        object    LocalStorageDriver    Storage driver
+  `saveDelayMs`   number    400                   Debounce delay
+  `debug`         boolean   false                 Console logs
 
----
+### `Savior.LocalStorageDriver`
+
+Default driver implementing:
+
+-   `save(formId, draft)`\
+-   `load(formId)`\
+-   `clear(formId)`
+
+------------------------------------------------------------------------
+
+## Compatibility
+
+-   Modern browsers\
+-   Works in restricted environments (logs only in debug)\
+-   Builds:
+    -   `savior.js` (ESM)\
+    -   `dist/savior.umd.js` (UMD)
+
+------------------------------------------------------------------------
+
+## Project Structure
+
+    src/
+      core/
+      drivers/
+      fields/
+
+    savior.js
+    dist/
+      savior.umd.js
+      savior.umd.js.map
+
+    examples/
+      demo.html
+      umd-demo.html
+
+------------------------------------------------------------------------
+
+## Limitations
+
+-   Browser only\
+-   LocalStorage only\
+-   No file fields\
+-   Standard controls only\
+-   One draft per form
+
+------------------------------------------------------------------------
 
 ## Roadmap
 
-- IndexedDB / hybrid drivers  
-- TypeScript version  
-- UMD bundle + npm release  
-- Automated tests  
-- Extended field compatibility  
+-   More drivers\
+-   Better field coverage\
+-   Per-field opt-out\
+-   More examples
 
----
+------------------------------------------------------------------------
 
-## Branding Palette
+## v0.2.0 --- Release Notes
 
-```
-Primary:      #0C161D
-Secondary:    #1B2A38
-Accent:       #8C5A2B
-Neutral dark: #1A1A1A
-Neutral light:#D9DEE2
-```
+-   Hardened LocalStorageDriver\
+-   Added `checkSupport()`\
+-   Clarified core API\
+-   Confirmed ESM + UMD support\
+-   Internal cleanup\
+-   No breaking changes
 
----
-
-## License
-
-To be defined.
-
-**Status:** MVP under active development.
