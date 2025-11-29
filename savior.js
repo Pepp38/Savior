@@ -1,5 +1,6 @@
 import { SaviorCore } from './src/core/savior-core.js';
 import { LocalStorageDriver } from './src/drivers/localStorageDriver.js';
+import { SessionStorageDriver } from './src/drivers/sessionStorageDriver.js';
 
 function isLocalStorageSupported() {
   try {
@@ -107,7 +108,8 @@ const Savior = {
     return draft ? JSON.stringify(draft, null, 2) : null;
   },
 
-  LocalStorageDriver
+  LocalStorageDriver,
+  SessionStorageDriver
 };
 
 export default Savior;
