@@ -8,6 +8,7 @@
   - `Savior.getDraft(formId, options?)` – inspect the raw draft for a given form.
   - `Savior.clearDraft(formId, options?)` – clear the stored draft.
   - `Savior.exportDraft(formId, options?)` – export the draft as pretty-printed JSON.
+- Added `SessionStorageDriver` as an alternative persistence driver.
 
 ## v0.2.0 – 2025-11-29
 
