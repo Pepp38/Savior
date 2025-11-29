@@ -12,7 +12,13 @@ function safeParse(raw) {
 export class LocalStorageDriver {
   constructor(options = {}) {
     this.storageKeyPrefix = options.storageKeyPrefix || 'savior_draft_';
+    this.debug = options.debug ?? false;
     this.isStorageAvailable = this.checkStorageAvailable();
+  }
+
+  logWarn(...args) {
+    if (!this.debug) return;
+    console.warn('[Savior]', ...args);
   }
 
   checkStorageAvailable() {
@@ -26,7 +32,7 @@ export class LocalStorageDriver {
       window.localStorage.removeItem(testKey);
       return true;
     } catch (error) {
-      console.warn('[Savior] localStorage not available:', error);
+      this.logWarn('localStorage not available:', error);
       return false;
     }
   }
@@ -42,7 +48,7 @@ export class LocalStorageDriver {
       const serializedDraft = JSON.stringify(draft);
       window.localStorage.setItem(this.getStorageKey(formId), serializedDraft);
     } catch (error) {
-      console.warn('[Savior] Failed to save draft:', error);
+      this.logWarn('Failed to save draft:', error);
     }
   }
 
@@ -55,7 +61,7 @@ export class LocalStorageDriver {
 
       return safeParse(raw);
     } catch (error) {
-      console.warn('[Savior] Failed to load draft:', error);
+      this.logWarn('Failed to load draft:', error);
       return null;
     }
   }
@@ -66,7 +72,7 @@ export class LocalStorageDriver {
     try {
       window.localStorage.removeItem(this.getStorageKey(formId));
     } catch (error) {
-      console.warn('[Savior] Failed to clear draft:', error);
+      this.logWarn('Failed to clear draft:', error);
     }
   }
 }

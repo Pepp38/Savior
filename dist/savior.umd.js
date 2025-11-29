@@ -317,12 +317,29 @@
 
 
   // Core autosave logic for Savior.
+  //
   // Depends on a driver exposing:
-  //   save(formId, draft),
-  //   load(formId),
-  //   clear(formId)
+  //   - save(formId, draft)
+  //   - load(formId)
+  //   - clear(formId)
+  //
+  // draft schema:
+  // {
+  //   formId: string,
+  //   timestampUtc: string, // ISO 8601
+  //   fields: {
+  //     [fieldName: string]: unknown
+  //   }
+  // }
 
   class SaviorCore {
+    /**
+     * @param {Object} options
+     * @param {string} [options.selector='form[data-savior]'] CSS selector used to find forms.
+     * @param {Object} options.driver Storage driver (must implement save/load/clear).
+     * @param {number} [options.saveDelayMs=400] Debounce delay in ms for autosave.
+     * @param {boolean} [options.debug=false] Enable debug logs in console.
+     */
     constructor(options) {
       this.formSelector = options.selector || 'form[data-savior]';
       this.driver = options.driver;
@@ -340,12 +357,29 @@
       console.warn('[Savior]', ...args);
     }
 
+    /**
+     * Discover all target forms and attach autosave wiring.
+     */
     init() {
       const forms = document.querySelectorAll(this.formSelector);
-      this.logDebug(`Initializing on selector "${this.formSelector}", found ${forms.length} form(s).`);
-      forms.forEach(formElement => this.attachToForm(formElement));
+      this.logDebug(
+        `Initializing on selector "${this.formSelector}", found ${forms.length} form(s).`
+      );
+
+      if (!this.driver) {
+        this.logWarn(
+          'No driver provided to SaviorCore. Initialization will be skipped.'
+        );
+        return;
+      }
+
+      forms.forEach((formElement) => this.attachToForm(formElement));
     }
 
+    /**
+     * Attach autosave + restore + clear behavior to a single form.
+     * @param {HTMLFormElement} formElement
+     */
     attachToForm(formElement) {
       const formId = this.getFormId(formElement);
       if (!formId) {
@@ -359,6 +393,12 @@
       this.wireSubmitEvent(formElement, formId);
     }
 
+    /**
+     * Derive a stable identifier for the form.
+     * Priority: data-savior > id > null.
+     * @param {HTMLFormElement} formElement
+     * @returns {string|null}
+     */
     getFormId(formElement) {
       return (
         formElement.getAttribute('data-savior') ||
@@ -367,6 +407,11 @@
       );
     }
 
+    /**
+     * Restore a saved draft (if any) into all compatible fields of the form.
+     * @param {HTMLFormElement} formElement
+     * @param {string} formId
+     */
     restoreForm(formElement, formId) {
       const storedDraft = this.driver.load(formId);
       if (!storedDraft || !storedDraft.fields) {
@@ -377,6 +422,9 @@
       this.logDebug(`Restoring draft for form "${formId}".`, storedDraft);
 
       const elements = formElement.elements;
+      if (!elements || !elements.length) {
+        return;
+      }
 
       for (let i = 0; i < elements.length; i++) {
         const element = elements[i];
@@ -393,6 +441,11 @@
       }
     }
 
+    /**
+     * Wire input/change events to trigger debounced autosave.
+     * @param {HTMLFormElement} formElement
+     * @param {string} formId
+     */
     wireInputEvents(formElement, formId) {
       let saveTimeoutId = null;
 
@@ -412,16 +465,25 @@
       formElement.addEventListener('change', scheduleSave);
     }
 
+    /**
+     * Collect current values from all supported fields and persist the draft.
+     * @param {HTMLFormElement} formElement
+     * @param {string} formId
+     */
     saveForm(formElement, formId) {
       const fields = {};
       const elements = formElement.elements;
+
+      if (!elements || !elements.length) {
+        return;
+      }
 
       for (let i = 0; i < elements.length; i++) {
         const element = elements[i];
         const fieldName = element.name;
         if (!fieldName) continue;
 
-        // On ne sauvegarde pas les mots de passe
+        // Do not persist passwords.
         if (element.type === 'password') continue;
 
         const adapter = getFieldAdapterForElement(element);
@@ -429,10 +491,8 @@
 
         const value = adapter.readValue(element);
 
-        // Convention: undefined = "rien à sauver" (utile pour les radios non cochées)
-        if (value === undefined) {
-          continue;
-        }
+        // Convention: undefined = "nothing to save" (e.g. unchecked radio).
+        if (value === undefined) continue;
 
         fields[fieldName] = value;
       }
@@ -447,6 +507,11 @@
       this.driver.save(formId, draft);
     }
 
+    /**
+     * On submit, clear the stored draft for this form.
+     * @param {HTMLFormElement} formElement
+     * @param {string} formId
+     */
     wireSubmitEvent(formElement, formId) {
       formElement.addEventListener('submit', () => {
         this.logDebug(`Clearing draft for form "${formId}" on submit.`);
@@ -457,10 +522,25 @@
 
   // Default driver using window.localStorage for persistence.
 
+  // Internal safe JSON parser for driver use
+  function safeParse(raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
   class LocalStorageDriver {
     constructor(options = {}) {
       this.storageKeyPrefix = options.storageKeyPrefix || 'savior_draft_';
+      this.debug = options.debug ?? false;
       this.isStorageAvailable = this.checkStorageAvailable();
+    }
+
+    logWarn(...args) {
+      if (!this.debug) return;
+      console.warn('[Savior]', ...args);
     }
 
     checkStorageAvailable() {
@@ -474,7 +554,7 @@
         window.localStorage.removeItem(testKey);
         return true;
       } catch (error) {
-        console.warn('[Savior] localStorage not available:', error);
+        this.logWarn('localStorage not available:', error);
         return false;
       }
     }
@@ -490,7 +570,7 @@
         const serializedDraft = JSON.stringify(draft);
         window.localStorage.setItem(this.getStorageKey(formId), serializedDraft);
       } catch (error) {
-        console.warn('[Savior] Failed to save draft:', error);
+        this.logWarn('Failed to save draft:', error);
       }
     }
 
@@ -501,9 +581,9 @@
         const raw = window.localStorage.getItem(this.getStorageKey(formId));
         if (!raw) return null;
 
-        return JSON.parse(raw);
+        return safeParse(raw);
       } catch (error) {
-        console.warn('[Savior] Failed to load draft:', error);
+        this.logWarn('Failed to load draft:', error);
         return null;
       }
     }
@@ -514,7 +594,7 @@
       try {
         window.localStorage.removeItem(this.getStorageKey(formId));
       } catch (error) {
-        console.warn('[Savior] Failed to clear draft:', error);
+        this.logWarn('Failed to clear draft:', error);
       }
     }
   }
@@ -562,7 +642,7 @@
         return null;
       }
 
-      const driver = options.driver || new LocalStorageDriver();
+  const driver = options.driver || new LocalStorageDriver({ debug: options.debug });
 
       const core = new SaviorCore({
         ...options,

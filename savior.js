@@ -44,7 +44,7 @@ const Savior = {
       return null;
     }
 
-    const driver = options.driver || new LocalStorageDriver();
+const driver = options.driver || new LocalStorageDriver({ debug: options.debug });
 
     const core = new SaviorCore({
       ...options,
