@@ -121,12 +121,13 @@ Returns `true` if autosave is supported.
 
 Options:
 
-  Option          Type      Default               Description
-  --------------- --------- --------------------- ----------------
-  `selector`      string    `form[data-savior]`   CSS selector
-  `driver`        object    LocalStorageDriver    Storage driver
-  `saveDelayMs`   number    400                   Debounce delay
-  `debug`         boolean   false                 Console logs
+| Option        | Type     | Default             | Description        |
+|---------------|-----------|---------------------|--------------------|
+| `selector`    | string    | `form[data-savior]` | CSS selector       |
+| `driver`      | object    | LocalStorageDriver  | Storage driver     |
+| `saveDelayMs` | number    | 400                 | Debounce delay     |
+| `debug`       | boolean   | false               | Console logs       |
+
 
 ### `Savior.LocalStorageDriver`
 
