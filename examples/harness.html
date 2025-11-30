@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Savior – Internal Test Harness</title>
+</head>
+<body>
+  <h1>Savior – Internal Test Harness</h1>
+
+  <form data-savior="harness-form">
+    <label>
+      Name
+      <input type="text" name="name" />
+    </label>
+    <br />
+    <label>
+      Email
+      <input type="email" name="email" />
+    </label>
+    <br />
+    <button type="submit">Submit</button>
+  </form>
+
+  <button id="run-test">Run autosave test</button>
+  <pre id="result" style="border:1px solid #ccc; padding:8px; margin-top:12px;"></pre>
+
+  <script type="module">
+    import Savior from '../savior.js';
+
+    // Initialise Savior on the harness form
+    const core = Savior.init({
+      selector: 'form[data-savior]',
+      debug: true
+    });
+
+    const resultElement = document.getElementById('result');
+    const runTestButton = document.getElementById('run-test');
+
+    function logResult(title, payload) {
+      const safePayload =
+        typeof payload === 'string'
+          ? payload
+          : JSON.stringify(payload, null, 2);
+      resultElement.textContent = `${title}\n\n${safePayload}`;
+      console.log('[Harness]', title, payload);
+    }
+
+    runTestButton.addEventListener('click', (event) => {
+      event.preventDefault();
+
+      const formElement = document.querySelector('form[data-savior="harness-form"]');
+      if (!formElement || !core) {
+        logResult('Error', 'Form or core not available');
+        return;
+      }
+
+      // 1) Simuler une saisie utilisateur
+      const nameInput = formElement.elements['name'];
+      const emailInput = formElement.elements['email'];
+
+      nameInput.value = 'Test User';
+      emailInput.value = 'test@example.com';
+
+      // 2) Sauvegarder le formulaire via le core
+      core.saveForm(formElement, 'harness-form');
+
+      // 3) Lire le draft via l’API publique
+      const draft = Savior.getDraft('harness-form');
+
+      logResult('Draft loaded via Savior.getDraft("harness-form")', draft);
+    });
+  </script>
+</body>
+</html>
