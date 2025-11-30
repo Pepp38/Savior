@@ -194,3 +194,5 @@ Default driver implementing:
 -   Internal cleanup\
 -   No breaking changes
 
+Savior fait partie de **Zippers**, une suite de micro-outils développée par Pepp38
+pour améliorer l’expérience de création et de développement, un module à la fois.
