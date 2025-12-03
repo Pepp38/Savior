@@ -10,10 +10,10 @@
   <form id="complex-form" data-savior>
     <input type="text" name="fullName" placeholder="Full name" />
     <input type="email" name="email" placeholder="Email" />
-    <input type="email" name="email_confirm" placeholder="Email confirm" />
+    <!-- <input type="email" name="email_confirm" placeholder="Email confirm" /> -->
     <input type="date" name="birthDate" />
     <input type="time" name="meetingTime" />
-    <input type="number" name="age" />
+    <!-- <input type="number" name="age" />  -->
     <input type="range" name="satisfaction" min="0" max="10" />
     <input type="color" name="favoriteColor" />
     <textarea name="bio" placeholder="Bio"></textarea>
@@ -36,7 +36,7 @@
   </form>
 
   <script type="module">
-    import Savior from '../../dist/savior.esm.js';
+import Savior from '../../savior.js';    // T03 – checkSupport
     import { fillLocalStorageToQuota, corruptSaviorJson } from './helpers.js';
 
     Savior.init({

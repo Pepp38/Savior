@@ -14,6 +14,12 @@
     </label>
     <br />
 
+    <input type="text" name="weird name" />
+<input type="text" name="snake_case" />
+<input type="text" name="kebab-case" />
+<input type="text" name="UPPERCASEFIELD" />
+<input type="text" name="éèàùç" />
+
     <label>
       Message
       <textarea name="message"></textarea>
@@ -40,8 +46,10 @@
   </form>
 
   <script type="module">
-    import Savior from '../../dist/savior.esm.js'; // adapte le chemin
-    // T03 – checkSupport
+    import Savior from '../../savior.js';   
+
+    window.Savior = Savior; // Pour debug en console
+
     console.log('Savior.checkSupport() =', Savior.checkSupport());
 
     Savior.init({

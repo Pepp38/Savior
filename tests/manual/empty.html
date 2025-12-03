@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<body>
+  <h1>No form here</h1>
+
+  <script type="module">
+    import Savior from '../../savior.js';
+    window.Savior = Savior;
+
+    Savior.init({
+      selector: '.nothing-here',
+      debug: true,
+      storageKeyPrefix: 'savior:test:empty:',
+    });
+  </script>
+</body>
+</html>
