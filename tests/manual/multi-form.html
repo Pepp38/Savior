@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Savior – Multi Forms</title>
+</head>
+<body>
+  <h1>Savior – Multi Forms</h1>
+
+  <form id="form-contact" data-savior>
+    <h2>Contact</h2>
+    <input type="text" name="name" placeholder="Name" />
+    <input type="email" name="email" placeholder="Email" />
+  </form>
+
+  <form id="form-profile" data-savior>
+    <h2>Profile</h2>
+    <input type="text" name="username" placeholder="Username" />
+    <textarea name="bio" placeholder="Bio"></textarea>
+  </form>
+
+  <form id="form-settings" data-savior>
+    <h2>Settings</h2>
+    <label><input type="checkbox" name="darkMode" /> Dark mode</label>
+  </form>
+
+  <script type="module">
+    import Savior from '../../dist/savior.esm.js';
+
+    Savior.init({
+      selector: 'form[data-savior]',
+      debug: true,
+      saveDelayMs: 400,
+      storageKeyPrefix: 'savior:test:multi:',
+    });
+  </script>
+</body>
+</html>

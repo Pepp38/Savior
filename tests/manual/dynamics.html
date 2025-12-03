@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Savior – Dynamic Forms</title>
+</head>
+<body>
+  <h1>Savior – Dynamic Forms</h1>
+
+  <div id="form-container"></div>
+
+  <button id="add-form-btn">Add form dynamically</button>
+
+  <script type="module">
+    import Savior from '../../dist/savior.esm.js';
+
+    const formContainer = document.getElementById('form-container');
+    const addFormBtn = document.getElementById('add-form-btn');
+
+    let saviorCore = null;
+
+    addFormBtn.addEventListener('click', () => {
+      formContainer.innerHTML = `
+        <form id="dynamic-form" data-savior>
+          <input type="text" name="title" placeholder="Title" />
+          <textarea name="content" placeholder="Content"></textarea>
+          <button type="submit">Submit</button>
+        </form>
+      `;
+
+      if (saviorCore && typeof saviorCore.destroy === 'function') {
+        saviorCore.destroy();
+      }
+
+      saviorCore = Savior.init({
+        selector: '#dynamic-form',
+        debug: true,
+        storageKeyPrefix: 'savior:test:dynamic:',
+      });
+    });
+
+    // Tu peux ensuite modifier le HTML entre deux refresh pour T09.
+  </script>
+</body>
+</html>

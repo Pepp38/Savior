@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Savior – Simple Form</title>
+</head>
+<body>
+  <h1>Savior – Simple Form</h1>
+
+  <form id="simple-form" data-savior>
+    <label>
+      Name
+      <input type="text" name="name" />
+    </label>
+    <br />
+
+    <label>
+      Message
+      <textarea name="message"></textarea>
+    </label>
+    <br />
+
+    <label>
+      Subscribe?
+      <input type="checkbox" name="subscribe" />
+    </label>
+    <br />
+
+    <label>
+      Favorite color
+      <select name="favoriteColor">
+        <option value="">-- choose --</option>
+        <option value="red">Red</option>
+        <option value="blue">Blue</option>
+      </select>
+    </label>
+    <br />
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <script type="module">
+    import Savior from '../../dist/savior.esm.js'; // adapte le chemin
+    // T03 – checkSupport
+    console.log('Savior.checkSupport() =', Savior.checkSupport());
+
+    Savior.init({
+      selector: 'form[data-savior]',
+      debug: true,
+      saveDelayMs: 400,
+      storageKeyPrefix: 'savior:test:simple:',
+    });
+
+    // Pour T15 (page sans match) tu pourras tester avec un autre fichier.
+  </script>
+</body>
+</html>

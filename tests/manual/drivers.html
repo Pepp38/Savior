@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Savior – Drivers</title>
+</head>
+<body>
+  <h1>Savior – Drivers</h1>
+
+  <form id="driver-form" data-savior>
+    <input type="text" name="data" placeholder="Some data" />
+    <button type="submit">Submit</button>
+  </form>
+
+  <script type="module">
+    import Savior, { SessionStorageDriver } from '../../dist/savior.esm.js';
+
+    // Test LocalStorageDriver (T12)
+    const coreLocal = Savior.init({
+      selector: '#driver-form',
+      debug: true,
+      storageKeyPrefix: 'savior:test:driver:local:',
+    });
+
+    // Expose une fonction pour re-init avec sessionStorage (T13)
+    window.useSessionDriver = () => {
+      if (coreLocal && typeof coreLocal.destroy === 'function') {
+        coreLocal.destroy();
+      }
+
+      Savior.init({
+        selector: '#driver-form',
+        debug: true,
+        driver: new SessionStorageDriver({
+          debug: true,
+          storageKeyPrefix: 'savior:test:driver:session:',
+        }),
+      });
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Savior – Complex Form</title>
+</head>
+<body>
+  <h1>Savior – Complex Form</h1>
+
+  <form id="complex-form" data-savior>
+    <input type="text" name="fullName" placeholder="Full name" />
+    <input type="email" name="email" placeholder="Email" />
+    <input type="email" name="email_confirm" placeholder="Email confirm" />
+    <input type="date" name="birthDate" />
+    <input type="time" name="meetingTime" />
+    <input type="number" name="age" />
+    <input type="range" name="satisfaction" min="0" max="10" />
+    <input type="color" name="favoriteColor" />
+    <textarea name="bio" placeholder="Bio"></textarea>
+
+    <fieldset>
+      <legend>Newsletter</legend>
+      <label><input type="radio" name="newsletter" value="daily" /> Daily</label>
+      <label><input type="radio" name="newsletter" value="weekly" /> Weekly</label>
+      <label><input type="radio" name="newsletter" value="none" /> None</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Interests</legend>
+      <label><input type="checkbox" name="interests_dev" /> Dev</label>
+      <label><input type="checkbox" name="interests_design" /> Design</label>
+      <label><input type="checkbox" name="interests_music" /> Music</label>
+    </fieldset>
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <script type="module">
+    import Savior from '../../dist/savior.esm.js';
+    import { fillLocalStorageToQuota, corruptSaviorJson } from './helpers.js';
+
+    Savior.init({
+      selector: '#complex-form',
+      debug: true,
+      saveDelayMs: 300,
+      storageKeyPrefix: 'savior:test:complex:',
+    });
+
+    // Pour T05 – tu appelles fillLocalStorageToQuota() dans la console avant de tester
+    window.fillLocalStorageToQuota = fillLocalStorageToQuota;
+
+    // Pour T06 – tu appelles corruptSaviorJson('savior:test:complex:complex-form')
+    window.corruptSaviorJson = corruptSaviorJson;
+  </script>
+</body>
+</html>
