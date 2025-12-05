@@ -2,6 +2,17 @@ import { SaviorCore } from './src/core/savior-core.js';
 import { LocalStorageDriver } from './src/drivers/localStorageDriver.js';
 import { SessionStorageDriver } from './src/drivers/sessionStorageDriver.js';
 
+const DEFAULT_OPTIONS = {
+  selector: 'form[data-savior]',
+  saveDelayMs: 400,
+  debug: false,
+  storageKeyPrefix: 'savior:',
+};
+
+/**
+ * Vérifie si localStorage est utilisable dans cet environnement.
+ * Utilisé par checkSupport et les helpers publics.
+ */
 function isLocalStorageSupported() {
   try {
     if (typeof window === 'undefined' || !window.localStorage) {
@@ -18,16 +29,75 @@ function isLocalStorageSupported() {
   }
 }
 
+/**
+ * Log de debug centralisé.
+ * Ne produit rien tant que debug === false.
+ */
+function logDebug(options, ...args) {
+  if (!options?.debug) return;
+  console.debug('[Savior]', ...args);
+}
+
+/**
+ * Fusionne options utilisateur et valeurs par défaut,
+ * avec une validation légère.
+ */
+function normalizeInitOptions(userOptions = {}) {
+  const merged = {
+    ...DEFAULT_OPTIONS,
+    ...userOptions,
+  };
+
+  // selector
+  if (typeof merged.selector !== 'string' || !merged.selector.trim()) {
+    console.warn(
+      '[Savior] Invalid "selector" option. Falling back to default:',
+      DEFAULT_OPTIONS.selector
+    );
+    merged.selector = DEFAULT_OPTIONS.selector;
+  }
+
+  // saveDelayMs
+  if (
+    typeof merged.saveDelayMs !== 'number' ||
+    !Number.isFinite(merged.saveDelayMs) ||
+    merged.saveDelayMs < 0
+  ) {
+    console.warn(
+      '[Savior] Invalid "saveDelayMs" option. Using default:',
+      DEFAULT_OPTIONS.saveDelayMs
+    );
+    merged.saveDelayMs = DEFAULT_OPTIONS.saveDelayMs;
+  }
+
+  // debug
+  merged.debug = Boolean(merged.debug);
+
+  // storageKeyPrefix
+  if (typeof merged.storageKeyPrefix !== 'string') {
+    console.warn(
+      '[Savior] Invalid "storageKeyPrefix" option. Using default:',
+      DEFAULT_OPTIONS.storageKeyPrefix
+    );
+    merged.storageKeyPrefix = DEFAULT_OPTIONS.storageKeyPrefix;
+  }
+
+  return merged;
+}
+
+/**
+ * Crée le driver par défaut (LocalStorageDriver) avec des options cohérentes.
+ */
 function createDefaultDriver(options = {}) {
   return new LocalStorageDriver({
-    debug: options.debug,
-    storageKeyPrefix: options.storageKeyPrefix
+    debug: Boolean(options.debug),
+    storageKeyPrefix: options.storageKeyPrefix ?? DEFAULT_OPTIONS.storageKeyPrefix,
   });
 }
 
 const Savior = {
   /**
-   * Check if the current runtime can support Savior safely.
+   * Vérifie si l'environnement supporte les APIs nécessaires.
    * @returns {boolean}
    */
   checkSupport() {
@@ -36,12 +106,21 @@ const Savior = {
 
   /**
    * Initialise Savior sur les formulaires ciblés.
+   *
+   * Flow:
+   * 1. Vérifie le support du storage (checkSupport).
+   * 2. Normalise les options avec defaults + validation légère.
+   * 3. Choisit un driver (par défaut: LocalStorageDriver).
+   * 4. Crée un SaviorCore, appelle core.init().
+   * 5. Retourne l'instance de core (avec destroy, etc.).
+   *
    * @param {Object} options
-   * @param {string} [options.selector] - Sélecteur des formulaires à protéger.
-   * @param {number} [options.saveDelayMs] - Délai avant save (debounce).
-   * @param {LocalStorageDriver} [options.driver] - Driver de stockage.
-   * @param {boolean} [options.debug] - Active les logs de debug.
-   * @param {string} [options.storageKeyPrefix] - Préfixe des clés de stockage (optionnel).
+   * @param {string} [options.selector]
+   * @param {number} [options.saveDelayMs]
+   * @param {LocalStorageDriver|SessionStorageDriver} [options.driver]
+   * @param {boolean} [options.debug]
+   * @param {string} [options.storageKeyPrefix]
+   * @returns {SaviorCore|null}
    */
   init(options = {}) {
     if (!Savior.checkSupport()) {
@@ -53,13 +132,15 @@ const Savior = {
       return null;
     }
 
-    const driver = options.driver || createDefaultDriver(options);
+    const normalized = normalizeInitOptions(options);
+    const driver = normalized.driver || createDefaultDriver(normalized);
 
     const core = new SaviorCore({
-      ...options,
-      driver
+      ...normalized,
+      driver,
     });
 
+    logDebug(normalized, 'Calling core.init() with selector', normalized.selector);
     core.init();
     return core;
   },
@@ -68,7 +149,7 @@ const Savior = {
    * Récupère le draft brut pour un formId donné (ou null si absent / non supporté).
    * @param {string} formId
    * @param {Object} [options]
-   * @param {LocalStorageDriver} [options.driver]
+   * @param {LocalStorageDriver|SessionStorageDriver} [options.driver]
    * @param {boolean} [options.debug]
    * @param {string} [options.storageKeyPrefix]
    * @returns {Object|null}
@@ -77,7 +158,12 @@ const Savior = {
     if (!formId) return null;
     if (!Savior.checkSupport()) return null;
 
-    const driver = options.driver || createDefaultDriver(options);
+    const effectiveOptions = {
+      ...DEFAULT_OPTIONS,
+      ...options,
+    };
+
+    const driver = effectiveOptions.driver || createDefaultDriver(effectiveOptions);
     return driver.load(formId);
   },
 
@@ -85,7 +171,7 @@ const Savior = {
    * Efface le draft pour un formId donné.
    * @param {string} formId
    * @param {Object} [options]
-   * @param {LocalStorageDriver} [options.driver]
+   * @param {LocalStorageDriver|SessionStorageDriver} [options.driver]
    * @param {boolean} [options.debug]
    * @param {string} [options.storageKeyPrefix]
    */
@@ -93,7 +179,12 @@ const Savior = {
     if (!formId) return;
     if (!Savior.checkSupport()) return;
 
-    const driver = options.driver || createDefaultDriver(options);
+    const effectiveOptions = {
+      ...DEFAULT_OPTIONS,
+      ...options,
+    };
+
+    const driver = effectiveOptions.driver || createDefaultDriver(effectiveOptions);
     driver.clear(formId);
   },
 
@@ -109,7 +200,8 @@ const Savior = {
   },
 
   LocalStorageDriver,
-  SessionStorageDriver
+  SessionStorageDriver,
 };
 
 export default Savior;
+export { LocalStorageDriver, SessionStorageDriver };
