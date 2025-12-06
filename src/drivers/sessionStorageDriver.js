@@ -16,6 +16,15 @@ export class SessionStorageDriver {
     this.isStorageAvailable = this.checkStorageAvailable();
   }
 
+  /**
+   * Centralise la génération de la clé de storage.
+   * Format: prefix + formId
+   * Exemple: "savior_session_draft_form-contact"
+   */
+  getStorageKey(formId) {
+    return `${this.storageKeyPrefix}${formId}`;
+  }
+
   logWarn(...args) {
     if (!this.debug) return;
     console.warn('[Savior]', ...args);
@@ -35,10 +44,6 @@ export class SessionStorageDriver {
       this.logWarn('sessionStorage not available:', error);
       return false;
     }
-  }
-
-  getStorageKey(formId) {
-    return this.storageKeyPrefix + formId;
   }
 
   save(formId, draft) {
