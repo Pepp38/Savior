@@ -1,5 +1,61 @@
 // src/core/savior-core.js
 
+/**
+ * SaviorCore – Internal Workflow (v0.3.0)
+ *
+ * High-level flow:
+ *
+ * 1. init()
+ *    - Select all forms matching the configured selector.
+ *    - For each form:
+ *        a) generate or read a stable formId
+ *        b) attempt to restore its draft (driver.load)
+ *        c) apply restored values field-by-field
+ *        d) attach input/change listeners (autosave)
+ *        e) attach the "submit" listener (clear on success)
+ *
+ * 2. restore()
+ *    - Retrieve draft via driver.load(formId)
+ *    - Apply values safely:
+ *        * skip fields that no longer exist
+ *        * never throw errors
+ *    - Form remains fully usable even with corrupted or missing data
+ *
+ * 3. listeners()
+ *    - Every input/change schedules a debounced save()
+ *    - Debounce ensures performance under rapid typing (T10)
+ *
+ * 4. save()
+ *    - Build a draft object:
+ *        {
+ *          formId,
+ *          timestampUtc,
+ *          fields: { name: value }
+ *        }
+ *    - Persist via driver.save(formId, draft)
+ *    - Drivers internally protect against quota errors, parsing errors, etc.
+ *
+ * 5. submit()
+ *    - When the form successfully submits:
+ *        driver.clear(formId)
+ *    - Guarantees no stale/ghost draft after submission (T02)
+ *
+ * Core invariants (validated by T01–T15):
+ *    - No unhandled exceptions under any circumstance
+ *    - Never blocks or interferes with the form's default behavior
+ *    - Predictable behavior across dynamic DOM changes (T08–T09)
+ *    - Recovers gracefully from:
+ *        * unsupported storage (T04)
+ *        * storage quota issues (T05)
+ *        * corrupted JSON (T06)
+ *
+ * The purpose of this workflow documentation:
+ *    - Provide a stable mental model for maintainers
+ *    - Define predictable guarantees for developers integrating Savior
+ *    - Serve as a reference point for v0.3.0 and beyond
+ */
+
+
 import { getFieldAdapterForElement } from '../fields/FieldAdapterRegistry.js';
 
 // Core autosave logic for Savior.
