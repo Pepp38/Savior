@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.3.0 – 2025-12-07
+
+Stability-focused release.  
+All manual tests (T01–T25) confirm a resilient autosave engine under normal, degraded, and hostile conditions: flaky storage drivers, corrupted JSON, dynamic forms, cloned nodes, stress-input events, and external storage alterations.
+
+### Highlights
+- No unhandled exceptions.
+- Consistent and predictable restore behavior.
+- LocalStorage and SessionStorage parity.
+- Strict form isolation.
+- Effective debouncing under heavy input load.
+
+v0.3.0 establishes the hardened, production-ready autosave core for Savior.
+
 ## v0.2.1 (unreleased)
 
 - Added internal `safeParse()` helper in `LocalStorageDriver` to harden JSON parsing.
@@ -15,3 +29,6 @@
 - Initial hardened core/driver for autosave engine.
 - ESM entry (`savior.js`) and UMD bundle (`dist/savior.umd.js`).
 - Automatic save/restore/clear for HTML forms with field adapters.
+
+
+

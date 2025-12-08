@@ -155,7 +155,14 @@ export class SaviorCore {
    * @param {string} formId
    */
   restoreForm(formElement, formId) {
-    const storedDraft = this.driver.load(formId);
+    let storedDraft = null;
+    try {
+      storedDraft = this.driver.load(formId);
+    } catch (err) {
+      this.logWarn(`Driver.load failed for form "${formId}":`, err?.message || err);
+      return; // ne pas tenter de restore
+    }
+
     if (!storedDraft || !storedDraft.fields) {
       this.logDebug(`No draft found for form "${formId}".`);
       return;
@@ -212,6 +219,7 @@ export class SaviorCore {
    * @param {HTMLFormElement} formElement
    * @param {string} formId
    */
+
   saveForm(formElement, formId) {
     const fields = {};
     const elements = formElement.elements;
@@ -246,7 +254,14 @@ export class SaviorCore {
     };
 
     this.logDebug(`Persisting draft for form "${formId}".`, draft);
-    this.driver.save(formId, draft);
+    try {
+      this.driver.save(formId, draft);
+    } catch (err) {
+      this.logWarn(
+        `Driver.save failed for form "${formId}":`,
+        err?.message || err
+      );
+    }
   }
 
   /**
@@ -257,7 +272,14 @@ export class SaviorCore {
   wireSubmitEvent(formElement, formId) {
     formElement.addEventListener('submit', () => {
       this.logDebug(`Clearing draft for form "${formId}" on submit.`);
-      this.driver.clear(formId);
+      try {
+        this.driver.clear(formId);
+      } catch (err) {
+        this.logWarn(
+          `Driver.clear failed for form "${formId}":`,
+          err?.message || err
+        );
+      }
     });
   }
 }

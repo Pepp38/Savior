@@ -204,4 +204,3 @@ const Savior = {
 };
 
 export default Savior;
-export { LocalStorageDriver, SessionStorageDriver };

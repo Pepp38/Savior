@@ -5,6 +5,7 @@ export default {
     file: 'dist/savior.umd.js',
     format: 'umd',
     name: 'Savior',
+    exports: 'default',
     sourcemap: true,
   },
 };

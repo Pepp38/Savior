@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>T16 - Flaky storage driver</title>
+</head>
+<body>
+  <h1>T16 - Flaky storage driver</h1>
+
+  <form data-savior="t16-flaky">
+    <label>
+      Notes
+      <textarea name="notes" rows="6" cols="40"></textarea>
+    </label>
+    <button type="submit">Submit</button>
+  </form>
+
+  <pre id="log"></pre>
+
+  <script src="../../dist/savior.umd.js"></script>
+  <script>
+    (function () {
+      var logEl = document.getElementById("log");
+
+      function log(msg) {
+        logEl.textContent += msg + "\n";
+      }
+
+      // capture erreurs non gérées
+      window.addEventListener("error", function (evt) {
+        log("[window.error] " + evt.message);
+      });
+
+      var baseDriver = new Savior.LocalStorageDriver(window.localStorage);
+
+      function randomFail() {
+        return Math.random() < 0.33;
+      }
+
+      var flakyDriver = {
+        save: function (formId, draft) {
+          if (randomFail()) {
+            throw new Error("Flaky save");
+          }
+          return baseDriver.save(formId, draft);
+        },
+        load: function (formId) {
+          if (randomFail()) {
+            throw new Error("Flaky load");
+          }
+          return baseDriver.load(formId);
+        },
+        clear: function (formId) {
+          if (randomFail()) {
+            throw new Error("Flaky clear");
+          }
+          return baseDriver.clear(formId);
+        }
+      };
+
+      try {
+        Savior.init({
+          selector: 'form[data-savior]',
+          driver: flakyDriver,
+          saveDelayMs: 400,
+          debug: true
+        });
+        log("Savior.init OK");
+      } catch (err) {
+        log("Savior.init threw: " + err.message);
+      }
+    }());
+  </script>
+</body>
+</html>
