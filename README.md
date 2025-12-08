@@ -21,7 +21,27 @@ Its goal is simple:
 - Zero dependencies, framework-agnostic
 - ESM and UMD builds
 
-All behavior validated through a 15-test manual crash-test suite.
+> All behavior validated through a **25-test manual crash-test suite (T01–T25)**.
+
+---
+
+## Reliability (v0.3.0)
+
+Savior v0.3.0 has been validated across the full resilience matrix:
+
+- Flaky drivers (random failures in save/load/clear)
+- Corrupted or invalid JSON
+- Dynamic and deleted fields
+- Cloned forms and multi-form pages
+- Stress input events (hundreds of rapid updates)
+- External storage alterations during typing
+
+Across all scenarios, Savior maintained:
+
+- Zero unhandled exceptions  
+- Stable restore behavior  
+- Strict per-form isolation  
+- LocalStorage / SessionStorage parity  
 
 ---
 
@@ -212,14 +232,14 @@ examples/
 
 ## v0.3.0 — Release Notes
 
-- Normalized public API  
-- Documented internal workflow  
-- Unified key computation strategy across drivers  
-- Hardened behavior for unsupported storage, quota, JSON corruption  
-- Improved field documentation  
+- Stability-focused release  
+- Unified storage key strategy across drivers  
+- Hardened behavior for unsupported storage, quota errors, and corrupted JSON  
+- Predictable restore with dynamic forms and cloned nodes  
+- Effective debouncing confirmed through stress-input testing  
 - Zero breaking changes  
 
 ---
 
-*Savior is part of **Zippers**, a suite of micro-tools developed by Pepp38
+*Savior is part of **Zippers**, a suite of micro-tools developed by Pepp38  
 to improve the creation and development experience, one module at a time.*
