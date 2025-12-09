@@ -12,7 +12,10 @@
     }
   },
   "scripts": {
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest --run --coverage"
   },
   "files": [
     "dist/",
@@ -39,6 +42,9 @@
   },
   "homepage": "https://github.com/Pepp38/Savior#readme",
   "devDependencies": {
-    "rollup": "^4.0.0"
+    "@vitest/coverage-v8": "^4.0.15",
+    "happy-dom": "^20.0.11",
+    "rollup": "^4.0.0",
+    "vitest": "^4.0.15"
   }
 }
