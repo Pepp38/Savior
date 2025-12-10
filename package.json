@@ -1,22 +1,30 @@
 {
-  "name": "savior",
+  "name": "@zippers/savior",
   "version": "0.3.0",
   "description": "Ultra-light automatic form draft recovery for web forms.",
   "type": "module",
-  "main": "dist/savior.umd.js",
-  "module": "savior.js",
+
+  "main": "./dist/savior.umd.js",
+  "module": "./savior.js",
+
   "exports": {
     ".": {
       "import": "./savior.js",
       "require": "./dist/savior.umd.js"
     }
   },
+
+  "publishConfig": {
+    "access": "public"
+  },
+
   "scripts": {
     "build": "rollup -c",
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:coverage": "vitest --run --coverage"
   },
+
   "files": [
     "dist/",
     "src/",
@@ -24,14 +32,18 @@
     "README.md",
     "LICENSE"
   ],
+
   "keywords": [
     "autosave",
     "forms",
     "draft",
     "localStorage",
     "javascript",
-    "frontend"
+    "frontend",
+    "zippers",
+    "savior"
   ],
+
   "author": "PLC Creates",
   "repository": {
     "type": "git",
@@ -41,10 +53,13 @@
     "url": "https://github.com/Pepp38/Savior/issues"
   },
   "homepage": "https://github.com/Pepp38/Savior#readme",
+
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.15",
     "happy-dom": "^20.0.11",
     "rollup": "^4.0.0",
     "vitest": "^4.0.15"
-  }
+  },
+
+  "license": "MIT"
 }
