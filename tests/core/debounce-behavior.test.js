@@ -19,10 +19,13 @@ describe('Savior – debounce behavior', () => {
 
     const input = form.querySelector('input[name="title"]');
 
-    // 2) Fake driver avec spy sur save()
+    // 2) Fake driver avec isSupported() + spy sur save()
     const saveSpy = vi.fn().mockResolvedValue(undefined);
 
     const fakeDriver = {
+      isSupported() {
+        return true;
+      },
       save(formId, draft) {
         return saveSpy(formId, draft);
       },
@@ -61,8 +64,8 @@ describe('Savior – debounce behavior', () => {
     // 4) On dépasse le délai de debounce
     vi.advanceTimersByTime(200); // total 500ms
 
-    // Laisser la promesse de save se résoudre si nécessaire
-    await Promise.resolve();
+    // On laisse Vitest exécuter les timers pendants (dont le debounce)
+    await vi.runAllTimersAsync();
 
     expect(saveSpy).toHaveBeenCalledTimes(1);
     expect(saveSpy).toHaveBeenCalledWith(
