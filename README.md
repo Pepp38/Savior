@@ -1,6 +1,8 @@
 # Savior
 
 [![npm version](https://img.shields.io/npm/v/%40zippers%2Fsavior.svg)](https://www.npmjs.com/package/@zippers/savior)
+![CI](https://github.com/Pepp38/Savior/actions/workflows/ci.yml/badge.svg?branch=forge)
+
 
 **Automatic Form Draft Recovery**
 
