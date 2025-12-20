@@ -1,15 +1,8 @@
 # Savior
 
-[![npm version](https://img.shields.io/npm/v/%40zippers%2Fsavior.svg)](https://www.npmjs.com/package/@zippers/savior)
-![CI](https://github.com/Pepp38/Savior/actions/workflows/ci.yml/badge.svg?branch=forge)
-![Bundle size](https://img.shields.io/bundlephobia/minzip/@zippers/savior)
+**Automatic form draft recovery for the real world.**
 
-## Automatic Form Draft Recovery
-
-**Savior prevents users from losing what they type into forms.**  
-Nothing more. Nothing less.
-
-It is a tiny, dependency-free JavaScript library that automatically saves form input and restores it after a refresh, navigation, tab close, or browser crash.
+Savior is a tiny, dependency-free JavaScript library that prevents users from losing form input after refresh, navigation, tab close, or browser crashes.
 
 No backend.  
 No sync.  
@@ -20,69 +13,78 @@ Just local, predictable draft recovery.
 
 ---
 
-## Why does this exist?
+## Why this exists
 
-Because forms fail in real life.
+Because form persistence *looks* trivial until it isn’t.
 
-Browsers crash. Tabs close. Pages refresh.  
-Users lose minutes or hours of input.
+Yes, you can wire `localStorage` yourself. Most teams do.  
+Until one of these happens:
 
-You can wire `localStorage` yourself. Most people do.  
-Until they forget one edge case.
+- storage contains corrupted or partial JSON  
+- dynamic fields are added or removed after initialization  
+- a submit partially fails  
+- multiple forms coexist on the same page  
+- storage quota is exceeded  
+- the page crashes mid-write  
 
-Savior exists to handle **all the boring, fragile parts** so you don’t have to.
+Savior exists to handle those boring, fragile edge cases consistently, so application code doesn’t have to.
 
 ---
 
-## What Savior does (and why you might care)
+## What it does
 
-- Autosaves input with a debounced strategy (400 ms by default)
-- Restores drafts automatically after refresh or crash
+- Automatically saves form inputs with a debounced strategy (400 ms default)
+- Restores drafts after refresh, crash, or navigation
 - Clears drafts on successful submit
-- Never throws unhandled exceptions
-- Survives corrupted storage, quota limits, and driver failures
 - Handles dynamic DOM changes predictably
-- Supports multi-form pages with strict isolation
+- Isolates drafts per form (no cross-pollution)
+- Survives corrupted storage and flaky drivers
+- Never throws unhandled exceptions
 - Ships with LocalStorage and SessionStorage drivers
 - Zero dependencies, framework-agnostic
-- ESM and UMD builds
+- ESM + UMD builds
 
-> All behavior has been validated through a 25-scenario manual crash-test suite (T01–T25).
+**All behavior is validated against failure modes, not happy paths.**
 
 ---
 
-## What Savior deliberately does NOT do
+## What it deliberately does NOT do
 
 - No backend
 - No cloud sync
 - No encryption
 - No analytics
-- No framework-specific bindings
+- No framework bindings
 - No file inputs
 
-If you need those things, this is not your tool.
+If you need any of the above, this is not your tool.
 
 ---
 
-## Reliability (v0.3.0)
+## Validation & testing
 
-Savior v0.3.0 has been tested against failure, not happy paths.
+Savior is tested against *real-world breakage*, not ideal conditions.
 
-Validated scenarios include:
+Coverage includes:
 
-- Flaky storage drivers
-- Invalid or corrupted JSON
-- Dynamic fields added or removed at runtime
-- Cloned forms and multi-form pages
-- Stress input with hundreds of rapid updates
-- External storage modification during typing
+- **18 automated test suites** (Vitest)
+- **25 documented manual crash scenarios** (T01–T25)
+
+Tested scenarios include:
+
+- Corrupted or invalid storage
+- Flaky or failing storage drivers
+- Dynamic field insertion/removal
+- Multi-form pages and cloned forms
+- Stress input with rapid updates
+- External storage mutation during typing
 
 Across all scenarios, Savior maintained:
 
 - Zero unhandled exceptions
 - Stable restore behavior
 - Strict per-form isolation
-- Identical behavior across LocalStorage and SessionStorage
+- Identical behavior across storage drivers
 
 ---
 
@@ -98,7 +100,14 @@ yarn add @zippers/savior
 
 ---
 
-## Basic usage
+## Minimal usage
+
+```html
+<form data-savior>
+  <input name="email" />
+  <textarea name="message"></textarea>
+</form>
+```
 
 ```js
 import Savior from '@zippers/savior';
@@ -107,6 +116,8 @@ Savior.init({
   selector: 'form[data-savior]'
 });
 ```
+
+That’s it.
 
 ---
 
@@ -118,4 +129,14 @@ Savior.init({
 
 ---
 
-*Savior is part of Zippers, a suite of small, focused tools developed by Pepp38.*
+## Scope statement
+
+Savior does **one thing**:
+
+> Ensure users don’t lose typed input when forms fail in real life.
+
+Nothing more. Nothing less.
+
+---
+
+*Savior is part of Zippers, a collection of small, focused tools.*
