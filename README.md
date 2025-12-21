@@ -10,6 +10,7 @@ No accounts.
 No framework coupling.
 
 Built for the moments when forms fail and users shouldn’t pay the price.
+
 ---
 
 ## Why this exists
