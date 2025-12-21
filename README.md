@@ -1,16 +1,15 @@
 # Savior
 
-**Automatic form draft recovery for the real world.**
+**Stop users from losing form input. Automatically.**
 
-Savior is a tiny, dependency-free JavaScript library that prevents users from losing form input after refresh, navigation, tab close, or browser crashes.
+Savior is a tiny, dependency-free JavaScript library that prevents users from losing form input when pages refresh, tabs close, or browsers crash.
 
 No backend.  
 No sync.  
 No accounts.  
 No framework coupling.
 
-Just local, predictable draft recovery.
-
+Built for the moments when forms fail and users shouldn’t pay the price.
 ---
 
 ## Why this exists
