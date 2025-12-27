@@ -7,6 +7,7 @@ const DEFAULT_OPTIONS = {
   saveDelayMs: 400,
   debug: false,
   storageKeyPrefix: 'savior:',
+  clearOnSubmit: true,
 };
 
 /**
@@ -27,6 +28,19 @@ function isLocalStorageSupported() {
   } catch {
     return false;
   }
+}
+
+/**
+ * Returns the driver that will actually be used, based on provided options.
+ * The goal is to make "support" checks reflect reality (driver chosen),
+ * not just localStorage availability.
+ */
+function getEffectiveDriver(options = {}) {
+  const effectiveOptions = {
+    ...DEFAULT_OPTIONS,
+    ...options,
+  };
+  return effectiveOptions.driver || createDefaultDriver(effectiveOptions);
 }
 
 /**
@@ -82,6 +96,21 @@ function normalizeInitOptions(userOptions = {}) {
     merged.storageKeyPrefix = DEFAULT_OPTIONS.storageKeyPrefix;
   }
 
+  // clearOnSubmit
+  merged.clearOnSubmit = merged.clearOnSubmit !== false;
+
+  // maxAgeMs (optional)
+  if (merged.maxAgeMs !== undefined) {
+    if (
+      typeof merged.maxAgeMs !== 'number' ||
+      !Number.isFinite(merged.maxAgeMs) ||
+      merged.maxAgeMs < 0
+    ) {
+      console.warn('[Savior] Invalid "maxAgeMs" option. Disabling TTL.');
+      delete merged.maxAgeMs;
+    }
+  }
+
   return merged;
 }
 
@@ -100,7 +129,31 @@ const Savior = {
    * Vérifie si l'environnement supporte les APIs nécessaires.
    * @returns {boolean}
    */
-  checkSupport() {
+  checkSupport(driverOrOptions) {
+    // If a driver is provided, trust its own availability flag when present.
+    const looksLikeDriver =
+      driverOrOptions &&
+      typeof driverOrOptions === 'object' &&
+      typeof driverOrOptions.save === 'function' &&
+      typeof driverOrOptions.load === 'function' &&
+      typeof driverOrOptions.clear === 'function';
+
+    if (looksLikeDriver) {
+      if (typeof driverOrOptions.isStorageAvailable === 'boolean') {
+        return driverOrOptions.isStorageAvailable;
+      }
+      return true;
+    }
+
+    if (driverOrOptions && typeof driverOrOptions === 'object') {
+      const driver = getEffectiveDriver(driverOrOptions);
+      if (typeof driver.isStorageAvailable === 'boolean') {
+        return driver.isStorageAvailable;
+      }
+      return true;
+    }
+
+    // Default behavior (LocalStorageDriver)
     return isLocalStorageSupported();
   },
 
@@ -123,17 +176,17 @@ const Savior = {
    * @returns {SaviorCore|null}
    */
   init(options = {}) {
-    if (!Savior.checkSupport()) {
-      if (options.debug) {
+    const normalized = normalizeInitOptions(options);
+    const driver = getEffectiveDriver(normalized);
+
+    if (!Savior.checkSupport(driver)) {
+      if (normalized.debug) {
         console.warn(
-          '[Savior] Environment does not support required storage APIs. Initialization skipped.'
+          '[Savior] Storage driver not available. Initialization skipped.'
         );
       }
       return null;
     }
-
-    const normalized = normalizeInitOptions(options);
-    const driver = normalized.driver || createDefaultDriver(normalized);
 
     const core = new SaviorCore({
       ...normalized,
@@ -156,14 +209,8 @@ const Savior = {
    */
   getDraft(formId, options = {}) {
     if (!formId) return null;
-    if (!Savior.checkSupport()) return null;
-
-    const effectiveOptions = {
-      ...DEFAULT_OPTIONS,
-      ...options,
-    };
-
-    const driver = effectiveOptions.driver || createDefaultDriver(effectiveOptions);
+    const driver = getEffectiveDriver(options);
+    if (!Savior.checkSupport(driver)) return null;
     return driver.load(formId);
   },
 
@@ -177,14 +224,8 @@ const Savior = {
    */
   clearDraft(formId, options = {}) {
     if (!formId) return;
-    if (!Savior.checkSupport()) return;
-
-    const effectiveOptions = {
-      ...DEFAULT_OPTIONS,
-      ...options,
-    };
-
-    const driver = effectiveOptions.driver || createDefaultDriver(effectiveOptions);
+    const driver = getEffectiveDriver(options);
+    if (!Savior.checkSupport(driver)) return;
     driver.clear(formId);
   },
 

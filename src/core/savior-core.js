@@ -87,6 +87,17 @@ export class SaviorCore {
     this.driver = options.driver;
     this.saveDelayMs = options.saveDelayMs ?? 400;
     this.debug = options.debug ?? false;
+
+    // Behavior flags
+    this.clearOnSubmit = options.clearOnSubmit ?? true;
+    this.maxAgeMs =
+      typeof options.maxAgeMs === 'number' && Number.isFinite(options.maxAgeMs)
+        ? options.maxAgeMs
+        : undefined;
+
+    // Lifecycle bookkeeping
+    this._bindingsByForm = new Map();
+    this._lastSerializedByFormId = new Map();
   }
 
   logDebug(...args) {
@@ -131,8 +142,15 @@ export class SaviorCore {
 
     this.logDebug(`Attaching to form "${formId}".`);
     this.restoreForm(formElement, formId);
-    this.wireInputEvents(formElement, formId);
-    this.wireSubmitEvent(formElement, formId);
+
+    // Ensure idempotency if attachToForm is called multiple times
+    if (this._bindingsByForm.has(formId)) {
+      this.logWarn(`Form "${formId}" is already attached. Skipping re-attach.`);
+      return;
+    }
+
+    const bindings = this._wireEvents(formElement, formId);
+    this._bindingsByForm.set(formId, bindings);
   }
 
   /**
@@ -168,6 +186,21 @@ export class SaviorCore {
       return;
     }
 
+    // Optional TTL: ignore stale drafts (do NOT auto-clear)
+    if (typeof this.maxAgeMs === 'number') {
+      const ts = storedDraft.timestampUtc;
+      const parsed = typeof ts === 'string' ? Date.parse(ts) : NaN;
+      if (Number.isFinite(parsed)) {
+        const ageMs = Date.now() - parsed;
+        if (ageMs > this.maxAgeMs) {
+          this.logDebug(
+            `Draft for form "${formId}" ignored (stale: ${ageMs}ms > ${this.maxAgeMs}ms).`
+          );
+          return;
+        }
+      }
+    }
+
     this.logDebug(`Restoring draft for form "${formId}".`, storedDraft);
 
     const elements = formElement.elements;
@@ -186,7 +219,15 @@ export class SaviorCore {
       if (!adapter) continue;
 
       const savedValue = storedDraft.fields[fieldName];
-      adapter.writeValue(element, savedValue);
+      try {
+        adapter.writeValue(element, savedValue);
+      } catch (err) {
+        this.logWarn(
+          `Adapter.writeValue failed for field "${fieldName}" in form "${formId}":`,
+          err?.message || err
+        );
+        continue;
+      }
     }
   }
 
@@ -195,7 +236,7 @@ export class SaviorCore {
    * @param {HTMLFormElement} formElement
    * @param {string} formId
    */
-  wireInputEvents(formElement, formId) {
+  _wireEvents(formElement, formId) {
     let saveTimeoutId = null;
 
     const scheduleSave = () => {
@@ -210,8 +251,38 @@ export class SaviorCore {
       }, this.saveDelayMs);
     };
 
+    const onSubmit = (event) => {
+      if (!this.clearOnSubmit) return;
+
+      // defaultPrevented may be set by another listener after ours.
+      // Using a microtask ensures we observe the final state.
+      const enqueue = typeof queueMicrotask === 'function'
+        ? queueMicrotask
+        : (cb) => Promise.resolve().then(cb);
+
+      enqueue(() => {
+        if (event?.defaultPrevented) {
+          this.logDebug(`Submit prevented for form "${formId}"; draft not cleared.`);
+          return;
+        }
+
+        this.logDebug(`Clearing draft for form "${formId}" on submit.`);
+        try {
+          this.driver.clear(formId);
+        } catch (err) {
+          this.logWarn(
+            `Driver.clear failed for form "${formId}":`,
+            err?.message || err
+          );
+        }
+      });
+    };
+
     formElement.addEventListener('input', scheduleSave);
     formElement.addEventListener('change', scheduleSave);
+    formElement.addEventListener('submit', onSubmit);
+
+    return { formElement, scheduleSave, onSubmit, getSaveTimeoutId: () => saveTimeoutId };
   }
 
   /**
@@ -228,6 +299,19 @@ export class SaviorCore {
       return;
     }
 
+    // Pre-index checkbox groups (same name)
+    const checkboxGroupsByName = new Map();
+    for (let i = 0; i < elements.length; i++) {
+      const el = elements[i];
+      if (!el?.name) continue;
+      if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+        const group = checkboxGroupsByName.get(el.name) ?? [];
+        group.push(el);
+        checkboxGroupsByName.set(el.name, group);
+      }
+    }
+    const handledCheckboxGroupNames = new Set();
+
     for (let i = 0; i < elements.length; i++) {
       const element = elements[i];
       const fieldName = element.name;
@@ -236,10 +320,40 @@ export class SaviorCore {
       // Do not persist passwords.
       if (element.type === 'password') continue;
 
+      // Checkbox group support (same name)
+      if (element instanceof HTMLInputElement && element.type === 'checkbox') {
+        const group = checkboxGroupsByName.get(fieldName);
+        if (group && group.length > 1) {
+          if (handledCheckboxGroupNames.has(fieldName)) {
+            continue;
+          }
+          handledCheckboxGroupNames.add(fieldName);
+
+          const selected = [];
+          for (const cb of group) {
+            if (cb.checked) {
+              selected.push(cb.value ?? 'on');
+            }
+          }
+
+          fields[fieldName] = selected;
+          continue;
+        }
+      }
+
       const adapter = getFieldAdapterForElement(element);
       if (!adapter) continue;
 
-      const value = adapter.readValue(element);
+      let value;
+      try {
+        value = adapter.readValue(element);
+      } catch (err) {
+        this.logWarn(
+          `Adapter.readValue failed for field "${fieldName}" in form "${formId}":`,
+          err?.message || err
+        );
+        continue;
+      }
 
       // Convention: undefined = "nothing to save" (e.g. unchecked radio).
       if (value === undefined) continue;
@@ -253,6 +367,24 @@ export class SaviorCore {
       fields
     };
 
+    // Skip identical writes (micro-optimization)
+    let serialized = '';
+    try {
+      serialized = JSON.stringify(draft);
+    } catch (err) {
+      // If serialization fails (very rare), fall back to attempting driver.save.
+      this.logWarn(`Draft serialization failed for form "${formId}":`, err?.message || err);
+    }
+
+    if (serialized) {
+      const last = this._lastSerializedByFormId.get(formId);
+      if (last === serialized) {
+        this.logDebug(`Skipping save for form "${formId}" (draft unchanged).`);
+        return;
+      }
+      this._lastSerializedByFormId.set(formId, serialized);
+    }
+
     this.logDebug(`Persisting draft for form "${formId}".`, draft);
     try {
       this.driver.save(formId, draft);
@@ -265,21 +397,32 @@ export class SaviorCore {
   }
 
   /**
-   * On submit, clear the stored draft for this form.
-   * @param {HTMLFormElement} formElement
-   * @param {string} formId
+   * Detach all listeners and clean internal state.
+   * Idempotent.
    */
-  wireSubmitEvent(formElement, formId) {
-    formElement.addEventListener('submit', () => {
-      this.logDebug(`Clearing draft for form "${formId}" on submit.`);
+  destroy() {
+    for (const [formId, binding] of this._bindingsByForm.entries()) {
+      const { formElement, scheduleSave, onSubmit, getSaveTimeoutId } = binding;
       try {
-        this.driver.clear(formId);
-      } catch (err) {
-        this.logWarn(
-          `Driver.clear failed for form "${formId}":`,
-          err?.message || err
-        );
+        formElement.removeEventListener('input', scheduleSave);
+        formElement.removeEventListener('change', scheduleSave);
+        formElement.removeEventListener('submit', onSubmit);
+      } catch {
+        // ignore
       }
-    });
+
+      const timeoutId = typeof getSaveTimeoutId === 'function' ? getSaveTimeoutId() : null;
+      if (timeoutId !== null) {
+        try {
+          clearTimeout(timeoutId);
+        } catch {
+          // ignore
+        }
+      }
+
+      this._lastSerializedByFormId.delete(formId);
+    }
+
+    this._bindingsByForm.clear();
   }
 }

@@ -66,6 +66,68 @@ describe('Savior – field types (checkbox, radio, select)', () => {
     if (core && typeof core.destroy === 'function') core.destroy();
   });
 
+  it('supports checkbox groups (same name) by storing selected values array', async () => {
+    const form = createForm(`
+      <form data-savior="checkbox-group-form">
+        <input type="checkbox" name="tags" value="a" />
+        <input type="checkbox" name="tags" value="b" />
+        <input type="checkbox" name="tags" value="c" />
+      </form>
+    `);
+
+    const [a, b, c] = form.querySelectorAll('input[name="tags"]');
+
+    let core = Savior.init({
+      selector: 'form[data-savior]',
+      debug: false,
+      storageKeyPrefix: prefix,
+      saveDelayMs,
+    });
+
+    a.checked = true;
+    b.checked = false;
+    c.checked = true;
+
+    a.dispatchEvent(new Event('change', { bubbles: true }));
+    b.dispatchEvent(new Event('change', { bubbles: true }));
+    c.dispatchEvent(new Event('change', { bubbles: true }));
+
+    await new Promise((resolve) => setTimeout(resolve, saveDelayMs + 50));
+
+    const key = Object.keys(window.localStorage).find((k) => k.includes(prefix));
+    expect(key).toBeTruthy();
+    const raw = window.localStorage.getItem(key);
+    const draft = JSON.parse(raw);
+    expect(Array.isArray(draft.fields.tags)).toBe(true);
+    expect(draft.fields.tags.sort()).toEqual(['a', 'c'].sort());
+
+    if (core && typeof core.destroy === 'function') core.destroy();
+
+    document.body.innerHTML = '';
+
+    const refreshedForm = createForm(`
+      <form data-savior="checkbox-group-form">
+        <input type="checkbox" name="tags" value="a" />
+        <input type="checkbox" name="tags" value="b" />
+        <input type="checkbox" name="tags" value="c" />
+      </form>
+    `);
+
+    core = Savior.init({
+      selector: 'form[data-savior]',
+      debug: false,
+      storageKeyPrefix: prefix,
+      saveDelayMs,
+    });
+
+    const [ra, rb, rc] = refreshedForm.querySelectorAll('input[name="tags"]');
+    expect(ra.checked).toBe(true);
+    expect(rb.checked).toBe(false);
+    expect(rc.checked).toBe(true);
+
+    if (core && typeof core.destroy === 'function') core.destroy();
+  });
+
   it('restores radio group selected value', async () => {
     const form = createForm(`
       <form data-savior="radio-form">
