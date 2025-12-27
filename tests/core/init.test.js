@@ -39,4 +39,52 @@ describe('Savior.init basic behavior', () => {
       core.destroy();
     }
   });
+
+  it('initializes with SessionStorageDriver even if localStorage is blocked', async () => {
+    const form = createForm(`
+      <form data-savior="session-form">
+        <input type="text" name="title" />
+      </form>
+    `);
+
+    const originalSetItem = window.localStorage.setItem;
+    window.localStorage.setItem = () => {
+      throw new Error('blocked');
+    };
+
+    try {
+      const driver = new Savior.SessionStorageDriver({
+        storageKeyPrefix: 'savior:test:session:',
+        debug: false,
+      });
+
+      const core = Savior.init({
+        selector: 'form[data-savior]',
+        debug: false,
+        saveDelayMs: 200,
+        driver,
+      });
+
+      expect(core).toBeTruthy();
+
+      const input = form.querySelector('input[name="title"]');
+      input.value = 'Hello session';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const key = Object.keys(window.sessionStorage).find((k) =>
+        k.includes('savior:test:session:')
+      );
+      expect(key).toBeTruthy();
+
+      const raw = window.sessionStorage.getItem(key);
+      const draft = JSON.parse(raw);
+      expect(draft.fields.title).toBe('Hello session');
+
+      if (core && typeof core.destroy === 'function') core.destroy();
+    } finally {
+      window.localStorage.setItem = originalSetItem;
+    }
+  });
 });
