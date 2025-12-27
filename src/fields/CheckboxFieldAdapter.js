@@ -29,11 +29,20 @@ export class CheckboxFieldAdapter extends FieldAdapter {
 
   /**
    * Restore the checked state from a boolean.
+   * Also supports checkbox groups saved as string[] (same name):
+   *   - value is an array of selected checkbox values
+   *   - each checkbox is checked if its value is included
    *
    * @param {HTMLInputElement} element
    * @param {unknown} value
    */
   writeValue(element, value) {
+    if (Array.isArray(value)) {
+      const v = element.value ?? 'on';
+      element.checked = value.includes(v);
+      return;
+    }
+
     element.checked = Boolean(value);
   }
 }
