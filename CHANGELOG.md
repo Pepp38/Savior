@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.4.1 (RC) – 2025-12-28
+
+Hardening-only release. No new features.
+
+### Changes
+- Test command uses `vitest run` for reliability.
+- Repo hygiene: removed old packed `.tgz` artifact and ignored `*.tgz`.
+- Logging: warnings are emitted only when `debug: true`.
+- Docs: removed outdated version references, updated README contract, and standardized changelog filename.
+
+## v0.4.0 – 2025-12-27
+
+Production hardening release. No scope expansion.
+
+### Highlights
+- Fail-soft adapters and submit-safe behavior for conservative draft handling.
+- Checkbox group restore hardening and lifecycle cleanup.
+- Optional TTL (`maxAgeMs`) for stale drafts.
+
 ## v0.3.0 – 2025-12-07
 
 Stability-focused release.  
