@@ -9,11 +9,13 @@ describe('Savior.init basic behavior', () => {
       </form>
     `);
 
-    const core = Savior.init({
+    const result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: 'savior:test:auto:',
     });
+    expect(result.ok).toBe(true);
+    const core = result.core;
 
     const input = form.querySelector('input[name="title"]');
     input.value = 'Hello tests';
@@ -58,14 +60,14 @@ describe('Savior.init basic behavior', () => {
         debug: false,
       });
 
-      const core = Savior.init({
+      const result = Savior.init({
         selector: 'form[data-savior]',
         debug: false,
         saveDelayMs: 200,
         driver,
       });
-
-      expect(core).toBeTruthy();
+      expect(result.ok).toBe(true);
+      const core = result.core;
 
       const input = form.querySelector('input[name="title"]');
       input.value = 'Hello session';
