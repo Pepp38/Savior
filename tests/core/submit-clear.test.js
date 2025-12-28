@@ -9,11 +9,13 @@ describe('Savior – clear on submit', () => {
       </form>
     `);
 
-    const core = Savior.init({
+    const result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: 'savior:test:t02:',
     });
+    expect(result.ok).toBe(true);
+    const core = result.core;
 
     const input = form.querySelector('input[name="title"]');
     input.value = 'Will be cleared';
@@ -30,13 +32,17 @@ describe('Savior – clear on submit', () => {
     expect(key).toBeTruthy();
     expect(window.localStorage.getItem(key)).toBeTruthy();
 
-    // Submit the form
+    // Submit the form (does not clear immediately)
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
-    // Clear happens in a microtask
+    // Pending clear is set in a microtask
     await Promise.resolve();
 
-    // Draft should be cleared
+    // Draft should still exist while the page is active
+    expect(window.localStorage.getItem(key)).toBeTruthy();
+
+    // Clear happens on page exit
+    window.dispatchEvent(new Event('pagehide'));
     expect(window.localStorage.getItem(key)).toBeNull();
 
     if (core && typeof core.destroy === 'function') {
@@ -54,11 +60,13 @@ describe('Savior – clear on submit', () => {
     // Another listener prevents default (SPA-style submit)
     form.addEventListener('submit', (e) => e.preventDefault());
 
-    const core = Savior.init({
+    const result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: 'savior:test:t02:prevent:',
     });
+    expect(result.ok).toBe(true);
+    const core = result.core;
 
     const input = form.querySelector('input[name="title"]');
     input.value = 'Should stay';
@@ -74,7 +82,8 @@ describe('Savior – clear on submit', () => {
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await Promise.resolve();
 
-    // Draft should remain
+    // Even on page exit, prevented submit should not clear
+    window.dispatchEvent(new Event('pagehide'));
     expect(window.localStorage.getItem(key)).toBeTruthy();
 
     if (core && typeof core.destroy === 'function') {
@@ -89,12 +98,14 @@ describe('Savior – clear on submit', () => {
       </form>
     `);
 
-    const core = Savior.init({
+    const result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: 'savior:test:t02:no-clear:',
       clearOnSubmit: false,
     });
+    expect(result.ok).toBe(true);
+    const core = result.core;
 
     const input = form.querySelector('input[name="title"]');
     input.value = 'Should stay';
@@ -109,6 +120,7 @@ describe('Savior – clear on submit', () => {
 
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     await Promise.resolve();
+    window.dispatchEvent(new Event('pagehide'));
 
     expect(window.localStorage.getItem(key)).toBeTruthy();
 

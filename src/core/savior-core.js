@@ -90,14 +90,153 @@ export class SaviorCore {
 
     // Behavior flags
     this.clearOnSubmit = options.clearOnSubmit ?? true;
+    this.restoreOn = options.restoreOn === 'manual' ? 'manual' : 'init';
     this.maxAgeMs =
       typeof options.maxAgeMs === 'number' && Number.isFinite(options.maxAgeMs)
         ? options.maxAgeMs
         : undefined;
 
+    // Pending-clear behavior (conservative: never clear immediately on submit)
+    this._pendingClearByFormId = new Set();
+    this._lifecycleHandlersBound = false;
+    this._onPageHide = null;
+    this._onVisibilityChange = null;
+
     // Lifecycle bookkeeping
     this._bindingsByForm = new Map();
     this._lastSerializedByFormId = new Map();
+  }
+
+  _ensureLifecycleHandlers() {
+    if (this._lifecycleHandlersBound) return;
+    this._lifecycleHandlersBound = true;
+
+    this._onPageHide = () => this._flushPendingClears('pagehide');
+    this._onVisibilityChange = () => {
+      try {
+        if (document.visibilityState === 'hidden') {
+          this._flushPendingClears('visibilitychange:hidden');
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    try {
+      window.addEventListener('pagehide', this._onPageHide);
+    } catch {
+      // ignore
+    }
+    try {
+      document.addEventListener('visibilitychange', this._onVisibilityChange);
+    } catch {
+      // ignore
+    }
+  }
+
+  _flushPendingClears(trigger) {
+    if (!this._pendingClearByFormId || this._pendingClearByFormId.size === 0) {
+      return;
+    }
+
+    for (const formId of this._pendingClearByFormId) {
+      this.logDebug(`Clearing draft for form "${formId}" on ${trigger}.`);
+      try {
+        this.driver.clear(formId);
+      } catch (err) {
+        this.logWarn(
+          `Driver.clear failed for form "${formId}":`,
+          err?.message || err
+        );
+      }
+    }
+
+    this._pendingClearByFormId.clear();
+  }
+
+  _determineCheckboxGroupMode(group) {
+    const values = group.map((cb) => cb.value ?? 'on');
+    const valuesAreUsable =
+      values.every((v) => typeof v === 'string' && v.length > 0) &&
+      new Set(values).size === group.length &&
+      !(new Set(values).size === 1 && values[0] === 'on');
+
+    if (valuesAreUsable) return 'value';
+
+    const ids = group.map((cb) => cb.id).filter(Boolean);
+    const idsAreUsable = ids.length === group.length && new Set(ids).size === group.length;
+    if (idsAreUsable) return 'id';
+
+    return 'index';
+  }
+
+  _buildCheckboxGroupPayload(group, mode) {
+    if (mode === 'value') {
+      const selected = [];
+      for (const cb of group) if (cb.checked) selected.push(cb.value ?? 'on');
+      return { __type: 'checkboxGroup', mode: 'value', selected };
+    }
+
+    if (mode === 'id') {
+      const selected = [];
+      for (const cb of group) if (cb.checked) selected.push(cb.id);
+      return { __type: 'checkboxGroup', mode: 'id', selected };
+    }
+
+    // mode: index
+    const selected = [];
+    for (let idx = 0; idx < group.length; idx++) {
+      if (group[idx].checked) selected.push(idx);
+    }
+    return { __type: 'checkboxGroup', mode: 'index', selected };
+  }
+
+  _restoreCheckboxGroup(group, savedValue, fieldName) {
+    // Legacy format: string[] of values (works only when values are meaningful)
+    if (Array.isArray(savedValue)) {
+      for (const cb of group) {
+        const v = cb.value ?? 'on';
+        cb.checked = savedValue.includes(v);
+      }
+      return { restored: true, mode: 'legacy' };
+    }
+
+    // New format
+    if (!savedValue || savedValue.__type !== 'checkboxGroup') {
+      return { restored: false };
+    }
+
+    const { mode, selected } = savedValue;
+    if (!Array.isArray(selected)) {
+      return { restored: false };
+    }
+
+    if (mode === 'value') {
+      for (const cb of group) {
+        const v = cb.value ?? 'on';
+        cb.checked = selected.includes(v);
+      }
+      return { restored: true, mode: 'value' };
+    }
+
+    if (mode === 'id') {
+      for (const cb of group) {
+        cb.checked = selected.includes(cb.id);
+      }
+      return { restored: true, mode: 'id' };
+    }
+
+    if (mode === 'index') {
+      for (let idx = 0; idx < group.length; idx++) {
+        group[idx].checked = selected.includes(idx);
+      }
+      this.logDebug(
+        `Checkbox group "${fieldName}" restored using index fallback (ambiguous config).`
+      );
+      return { restored: true, mode: 'index' };
+    }
+
+    return { restored: false };
   }
 
   logDebug(...args) {
@@ -141,7 +280,9 @@ export class SaviorCore {
     }
 
     this.logDebug(`Attaching to form "${formId}".`);
-    this.restoreForm(formElement, formId);
+    if (this.restoreOn !== 'manual') {
+      this.restoreForm(formElement, formId);
+    }
 
     // Ensure idempotency if attachToForm is called multiple times
     if (this._bindingsByForm.has(formId)) {
@@ -151,6 +292,21 @@ export class SaviorCore {
 
     const bindings = this._wireEvents(formElement, formId);
     this._bindingsByForm.set(formId, bindings);
+  }
+
+  /**
+   * Restore drafts for all attached forms.
+   * Useful for dynamic forms (frameworks) where fields are not present at init.
+   * Fail-soft by design.
+   */
+  restore() {
+    for (const [formId, bindings] of this._bindingsByForm.entries()) {
+      try {
+        this.restoreForm(bindings.formElement, formId);
+      } catch {
+        // ignore
+      }
+    }
   }
 
   /**
@@ -208,12 +364,47 @@ export class SaviorCore {
       return;
     }
 
+    // Pre-index checkbox groups (same name) for group-aware restoration
+    const checkboxGroupsByName = new Map();
+    for (let i = 0; i < elements.length; i++) {
+      const el = elements[i];
+      if (!el?.name) continue;
+      if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+        const group = checkboxGroupsByName.get(el.name) ?? [];
+        group.push(el);
+        checkboxGroupsByName.set(el.name, group);
+      }
+    }
+    const handledCheckboxGroupNames = new Set();
+
     for (let i = 0; i < elements.length; i++) {
       const element = elements[i];
       const fieldName = element.name;
       if (!fieldName) continue;
 
       if (!(fieldName in storedDraft.fields)) continue;
+
+      // Checkbox group support (same name)
+      if (element instanceof HTMLInputElement && element.type === 'checkbox') {
+        const group = checkboxGroupsByName.get(fieldName);
+        if (group && group.length > 1) {
+          if (handledCheckboxGroupNames.has(fieldName)) {
+            continue;
+          }
+          handledCheckboxGroupNames.add(fieldName);
+
+          const savedValue = storedDraft.fields[fieldName];
+          try {
+            this._restoreCheckboxGroup(group, savedValue, fieldName);
+          } catch (err) {
+            this.logWarn(
+              `Checkbox group restore failed for field "${fieldName}" in form "${formId}":`,
+              err?.message || err
+            );
+          }
+          continue;
+        }
+      }
 
       const adapter = getFieldAdapterForElement(element);
       if (!adapter) continue;
@@ -266,15 +457,9 @@ export class SaviorCore {
           return;
         }
 
-        this.logDebug(`Clearing draft for form "${formId}" on submit.`);
-        try {
-          this.driver.clear(formId);
-        } catch (err) {
-          this.logWarn(
-            `Driver.clear failed for form "${formId}":`,
-            err?.message || err
-          );
-        }
+        this.logDebug(`Submit detected for form "${formId}"; marking pendingClear.`);
+        this._pendingClearByFormId.add(formId);
+        this._ensureLifecycleHandlers();
       });
     };
 
@@ -329,14 +514,14 @@ export class SaviorCore {
           }
           handledCheckboxGroupNames.add(fieldName);
 
-          const selected = [];
-          for (const cb of group) {
-            if (cb.checked) {
-              selected.push(cb.value ?? 'on');
-            }
+          const mode = this._determineCheckboxGroupMode(group);
+          if (mode !== 'value') {
+            this.logDebug(
+              `Checkbox group "${fieldName}" saved using ${mode} mode (fallback).`
+            );
           }
-
-          fields[fieldName] = selected;
+          const payload = this._buildCheckboxGroupPayload(group, mode);
+          fields[fieldName] = payload;
           continue;
         }
       }
@@ -424,5 +609,29 @@ export class SaviorCore {
     }
 
     this._bindingsByForm.clear();
+
+    // Global lifecycle listeners (pagehide / visibilitychange)
+    if (this._lifecycleHandlersBound) {
+      try {
+        window.removeEventListener('pagehide', this._onPageHide);
+      } catch {
+        // ignore
+      }
+      try {
+        document.removeEventListener('visibilitychange', this._onVisibilityChange);
+      } catch {
+        // ignore
+      }
+
+      this._lifecycleHandlersBound = false;
+      this._onPageHide = null;
+      this._onVisibilityChange = null;
+    }
+
+    try {
+      this._pendingClearByFormId?.clear?.();
+    } catch {
+      // ignore
+    }
   }
 }
