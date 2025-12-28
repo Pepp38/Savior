@@ -17,12 +17,15 @@ describe('Savior – dynamic fields', () => {
 
     const titleInput = form.querySelector('input[name="title"]');
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     // 2) Ajout dynamique d'un champ après init
     const extraInput = document.createElement('input');
@@ -53,12 +56,18 @@ describe('Savior – dynamic fields', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+
+    expect(result.ok).toBe(true);
+    core = result.core;
+
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const restoredTitle = refreshedForm.querySelector('input[name="title"]');
     const restoredExtra = refreshedForm.querySelector('input[name="extra"]');
@@ -85,12 +94,15 @@ describe('Savior – dynamic fields', () => {
     const fieldB = form.querySelector('input[name="fieldB"]');
     const fieldC = form.querySelector('input[name="fieldC"]');
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     fieldA.value = 'Value A';
     fieldB.value = 'Value B';
@@ -116,7 +128,7 @@ describe('Savior – dynamic fields', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
