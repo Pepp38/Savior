@@ -25,12 +25,14 @@ describe('Savior – maxAgeMs (TTL) behavior', () => {
       </form>
     `);
 
-    const core = Savior.init({
+    const result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       maxAgeMs: 60_000, // 1 minute
     });
+    expect(result.ok).toBe(true);
+    const core = result.core;
 
     const input = form.querySelector('input[name="title"]');
     expect(input.value).toBe('');

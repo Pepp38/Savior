@@ -11,11 +11,13 @@ describe('Savior.restore basic behavior', () => {
       </form>
     `);
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: 'savior:test:restore:',
     });
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     const titleInput = form.querySelector('input[name="title"]');
     const messageTextarea = form.querySelector('textarea[name="message"]');
@@ -43,11 +45,17 @@ describe('Savior.restore basic behavior', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: 'savior:test:restore:',
     });
+
+    expect(result.ok).toBe(true);
+    core = result.core;
+
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const restoredTitle = form.querySelector('input[name="title"]');
     const restoredMessage = form.querySelector('textarea[name="message"]');

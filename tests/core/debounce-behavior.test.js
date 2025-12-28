@@ -37,13 +37,15 @@ describe('Savior – debounce behavior', () => {
       },
     };
 
-    const core = Savior.init({
+    const result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       driver: fakeDriver,
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    const core = result.core;
 
     // 3) Plusieurs frappes rapides (< saveDelayMs)
     input.value = 'S';

@@ -27,12 +27,14 @@ describe('Savior – large form stress test', () => {
 
     const inputs = Array.from(form.querySelectorAll('input'));
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     inputs.forEach((input, index) => {
       input.value = `Value ${index + 1}`;
@@ -51,12 +53,14 @@ describe('Savior – large form stress test', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const refreshedInputs = Array.from(refreshedForm.querySelectorAll('input'));
 
