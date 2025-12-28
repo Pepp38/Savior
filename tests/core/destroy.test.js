@@ -12,12 +12,14 @@ describe('SaviorCore.destroy lifecycle', () => {
       </form>
     `);
 
-    const core = Savior.init({
+    const result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs: 200,
     });
+    expect(result.ok).toBe(true);
+    const core = result.core;
 
     const input = form.querySelector('input[name="title"]');
     input.value = 'Before destroy';
