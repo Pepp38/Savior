@@ -37,6 +37,12 @@ export class CheckboxFieldAdapter extends FieldAdapter {
    * @param {unknown} value
    */
   writeValue(element, value) {
+    // Checkbox groups are restored group-aware in SaviorCore.
+    // If someone bypasses that logic, do nothing rather than applying partial state.
+    if (value && typeof value === 'object' && value.__type === 'checkboxGroup') {
+      return;
+    }
+
     if (Array.isArray(value)) {
       const v = element.value ?? 'on';
       element.checked = value.includes(v);
