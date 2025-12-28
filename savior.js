@@ -55,8 +55,9 @@ function logDebug(options, ...args) {
 
 function logWarn(options, ...args) {
   if (!options?.debug) return;
-  warn(...args);
+  console.warn('[Savior]', ...args);
 }
+
 
 /**
  * Fusionne options utilisateur et valeurs par défaut,
