@@ -55,7 +55,7 @@ function logDebug(options, ...args) {
 
 function logWarn(options, ...args) {
   if (!options?.debug) return;
-  console.warn('[Savior]', ...args);
+  warn(...args);
 }
 
 /**
@@ -67,11 +67,15 @@ function normalizeInitOptions(userOptions = {}) {
     ...DEFAULT_OPTIONS,
     ...userOptions,
   };
+  merged.debug = merged.debug === true;
 
+  const warn = (...args) => {
+    if (merged.debug !== true) return;
+    console.warn('[Savior]', ...args);
+  };
   // selector
   if (typeof merged.selector !== 'string' || !merged.selector.trim()) {
-    console.warn(
-      '[Savior] Invalid "selector" option. Falling back to default:',
+    warn('Invalid "selector" option. Falling back to default:',
       DEFAULT_OPTIONS.selector
     );
     merged.selector = DEFAULT_OPTIONS.selector;
@@ -83,20 +87,14 @@ function normalizeInitOptions(userOptions = {}) {
     !Number.isFinite(merged.saveDelayMs) ||
     merged.saveDelayMs < 0
   ) {
-    console.warn(
-      '[Savior] Invalid "saveDelayMs" option. Using default:',
+    warn('Invalid "saveDelayMs" option. Using default:',
       DEFAULT_OPTIONS.saveDelayMs
     );
     merged.saveDelayMs = DEFAULT_OPTIONS.saveDelayMs;
   }
-
-  // debug
-  merged.debug = Boolean(merged.debug);
-
   // storageKeyPrefix
   if (typeof merged.storageKeyPrefix !== 'string') {
-    console.warn(
-      '[Savior] Invalid "storageKeyPrefix" option. Using default:',
+    warn('Invalid "storageKeyPrefix" option. Using default:',
       DEFAULT_OPTIONS.storageKeyPrefix
     );
     merged.storageKeyPrefix = DEFAULT_OPTIONS.storageKeyPrefix;
@@ -117,7 +115,7 @@ function normalizeInitOptions(userOptions = {}) {
       !Number.isFinite(merged.maxAgeMs) ||
       merged.maxAgeMs < 0
     ) {
-      console.warn('[Savior] Invalid "maxAgeMs" option. Disabling TTL.');
+      warn('Invalid "maxAgeMs" option. Disabling TTL.');
       delete merged.maxAgeMs;
     }
   }
