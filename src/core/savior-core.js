@@ -1,7 +1,7 @@
 // src/core/savior-core.js
 
 /**
- * SaviorCore – Internal Workflow (v0.3.0)
+ * SaviorCore – Internal Workflow
  *
  * High-level flow:
  *
@@ -52,7 +52,7 @@
  * The purpose of this workflow documentation:
  *    - Provide a stable mental model for maintainers
  *    - Define predictable guarantees for developers integrating Savior
- *    - Serve as a reference point for v0.3.0 and beyond
+ *    - Serve as a reference point for future versions
  */
 
 
