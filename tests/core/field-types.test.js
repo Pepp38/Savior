@@ -24,12 +24,14 @@ describe('Savior – field types (checkbox, radio, select)', () => {
     const accept = form.querySelector('input[name="acceptTerms"]');
     const subscribe = form.querySelector('input[name="subscribeNewsletter"]');
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     accept.checked = true;
     subscribe.checked = false;
@@ -50,12 +52,17 @@ describe('Savior – field types (checkbox, radio, select)', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+
+    expect(result.ok).toBe(true);
+    core = result.core;
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const restoredAccept = refreshedForm.querySelector('input[name="acceptTerms"]');
     const restoredSubscribe = refreshedForm.querySelector('input[name="subscribeNewsletter"]');
@@ -77,12 +84,14 @@ describe('Savior – field types (checkbox, radio, select)', () => {
 
     const [a, b, c] = form.querySelectorAll('input[name="tags"]');
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     a.checked = true;
     b.checked = false;
@@ -98,8 +107,11 @@ describe('Savior – field types (checkbox, radio, select)', () => {
     expect(key).toBeTruthy();
     const raw = window.localStorage.getItem(key);
     const draft = JSON.parse(raw);
-    expect(Array.isArray(draft.fields.tags)).toBe(true);
-    expect(draft.fields.tags.sort()).toEqual(['a', 'c'].sort());
+    expect(draft.fields.tags).toBeTruthy();
+    expect(draft.fields.tags.__type).toBe('checkboxGroup');
+    expect(draft.fields.tags.mode).toBe('value');
+    expect(Array.isArray(draft.fields.tags.selected)).toBe(true);
+    expect(draft.fields.tags.selected.sort()).toEqual(['a', 'c'].sort());
 
     if (core && typeof core.destroy === 'function') core.destroy();
 
@@ -113,12 +125,15 @@ describe('Savior – field types (checkbox, radio, select)', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const [ra, rb, rc] = refreshedForm.querySelectorAll('input[name="tags"]');
     expect(ra.checked).toBe(true);
@@ -140,12 +155,14 @@ describe('Savior – field types (checkbox, radio, select)', () => {
     const radios = form.querySelectorAll('input[name="color"]');
     const [red, green, blue] = radios;
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     green.checked = true;
     green.dispatchEvent(new Event('change', { bubbles: true }));
@@ -164,12 +181,15 @@ describe('Savior – field types (checkbox, radio, select)', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const refreshedRadios = refreshedForm.querySelectorAll('input[name="color"]');
     const [rRed, rGreen, rBlue] = refreshedRadios;
@@ -200,12 +220,14 @@ describe('Savior – field types (checkbox, radio, select)', () => {
     const country = form.querySelector('select[name="country"]');
     const fruits = form.querySelector('select[name="fruits"]');
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     country.value = 'us';
     country.dispatchEvent(new Event('change', { bubbles: true }));
@@ -235,12 +257,15 @@ describe('Savior – field types (checkbox, radio, select)', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const rCountry = refreshedForm.querySelector('select[name="country"]');
     const rFruits = refreshedForm.querySelector('select[name="fruits"]');
