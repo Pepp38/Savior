@@ -11,6 +11,10 @@ describe('Savior.init with no matching forms', () => {
       });
 
     expect(fn).not.toThrow();
+
+    const result = fn();
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('no_forms_found');
     expect(window.localStorage.length).toBe(0);
   });
 });

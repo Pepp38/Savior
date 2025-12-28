@@ -8,6 +8,7 @@ const DEFAULT_OPTIONS = {
   debug: false,
   storageKeyPrefix: 'savior:',
   clearOnSubmit: true,
+  restoreOn: 'init',
 };
 
 /**
@@ -50,6 +51,11 @@ function getEffectiveDriver(options = {}) {
 function logDebug(options, ...args) {
   if (!options?.debug) return;
   console.debug('[Savior]', ...args);
+}
+
+function logWarn(options, ...args) {
+  if (!options?.debug) return;
+  console.warn('[Savior]', ...args);
 }
 
 /**
@@ -98,6 +104,11 @@ function normalizeInitOptions(userOptions = {}) {
 
   // clearOnSubmit
   merged.clearOnSubmit = merged.clearOnSubmit !== false;
+
+  // restoreOn
+  if (merged.restoreOn !== 'manual') {
+    merged.restoreOn = 'init';
+  }
 
   // maxAgeMs (optional)
   if (merged.maxAgeMs !== undefined) {
@@ -179,23 +190,33 @@ const Savior = {
     const normalized = normalizeInitOptions(options);
     const driver = getEffectiveDriver(normalized);
 
-    if (!Savior.checkSupport(driver)) {
-      if (normalized.debug) {
-        console.warn(
-          '[Savior] Storage driver not available. Initialization skipped.'
-        );
-      }
-      return null;
+    // Driver availability (prefer driver's own flag when present)
+    const isDriverAvailable =
+      typeof driver?.isStorageAvailable === 'boolean' ? driver.isStorageAvailable : Savior.checkSupport(driver);
+
+    if (!isDriverAvailable) {
+      logWarn(normalized, 'Driver not available; init aborted.');
+      return { ok: false, reason: 'storage_unavailable' };
     }
 
-    const core = new SaviorCore({
-      ...normalized,
-      driver,
-    });
+    // Ensure we have a usable selector and at least one form
+    let forms = [];
+    try {
+      forms = Array.from(document.querySelectorAll(normalized.selector));
+    } catch (err) {
+      logWarn(normalized, 'Invalid selector or unsupported environment; init aborted.');
+      return { ok: false, reason: 'unsupported_environment' };
+    }
 
+    if (forms.length === 0) {
+      logDebug(normalized, 'No forms found for selector', normalized.selector);
+      return { ok: false, reason: 'no_forms_found' };
+    }
+
+    const core = new SaviorCore({ ...normalized, driver });
     logDebug(normalized, 'Calling core.init() with selector', normalized.selector);
     core.init();
-    return core;
+    return { ok: true, core };
   },
 
   /**
