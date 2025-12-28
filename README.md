@@ -61,6 +61,14 @@ If you need any of the above, this is not your tool.
 
 ---
 
+## Limitations
+
+- Browser-only
+- LocalStorage / SessionStorage only
+- One draft per form
+
+---
+
 ## Validation & testing
 
 Savior is tested against *real-world breakage*, not ideal conditions.
@@ -121,14 +129,6 @@ That’s it.
 
 ---
 
-## Limitations
-
-- Browser-only
-- LocalStorage / SessionStorage only
-- One draft per form
-
----
-
 ## Scope statement
 
 Savior does **one thing**:
@@ -140,6 +140,7 @@ Nothing more. Nothing less.
 ---
 
 *Savior is part of Zippers, a collection of small, focused tools.*
+
 ---
 
 ## API Reference
@@ -148,25 +149,27 @@ Nothing more. Nothing less.
 
 Initializes Savior and attaches to matching forms.
 
+Returns `{ ok: boolean, core?: SaviorCore, reason?: string }`.
+
 ### `Savior.destroy()`
 
-Detaches listeners and stops timers.
+Detaches listeners and stops all timers.
 
 ### `Savior.getDraft(formId, options?)`
 
-Returns the current stored draft for a given `formId` (or `null` if none / stale).
+Returns the stored draft for a given `formId`, or `null` if none exists or if the draft is stale.
 
 ### `Savior.clearDraft(formId)`
 
-Clears the stored draft for `formId`.
+Clears the stored draft for the given `formId`.
 
 ### `Savior.exportDraft(formId)`
 
-Exports the stored draft payload (useful for debugging or support).
+Exports the raw draft payload (useful for debugging or support tooling).
 
 ### `Savior.checkSupport(driver?)`
 
-Returns `{ supported: boolean, reason?: string }` for the chosen driver (or default).
+Returns `{ supported: boolean, reason?: string }` for the selected driver (or default).
 
 ### Drivers
 
@@ -179,13 +182,16 @@ Returns `{ supported: boolean, reason?: string }` for the chosen driver (or defa
 
 - `selector` (string): CSS selector used to find forms. Default: `form[data-savior]`
 - `saveDelayMs` (number): debounce delay before persisting input.
-- `debug` (boolean): when `true`, enables warnings and debug logs. Default: `false` (silent).
+- `debug` (boolean): enables warnings and debug logs when `true`. Default: `false` (silent).
 - `storageKeyPrefix` (string): key prefix used by storage drivers.
 - `clearOnSubmit` (boolean): conservative clear behavior on submit.
-- `restoreOn` (string | string[]): when to restore drafts (ex: `"startup"`, `"focus"`, etc).
+- `restoreOn` (`"init"` | `"manual"`):
+  - `init` (default): restore drafts automatically on initialization
+  - `manual`: disable auto-restore and control restoration yourself
 - `maxAgeMs` (number): TTL for stored drafts. Stale drafts are ignored.
 
-If an option is invalid, Savior falls back to safe defaults. With `debug: false`, this is silent.
+If an option is invalid, Savior falls back to safe defaults.  
+With `debug: false`, this happens silently.
 
 ---
 
@@ -197,12 +203,20 @@ Savior is designed to be boring and conservative:
 - It is **conservative with user data**: drafts are never cleared on ambiguous outcomes.
 - It **does not clear synchronously on submit**.
 - If a submit is prevented or fails, the draft remains.
-- Storage corruption is handled fail-soft (corrupted drafts are ignored, not fatal).
-- If `maxAgeMs` is set, drafts older than the TTL are ignored (treated as stale).
+- Storage corruption is handled fail-soft (corrupted drafts are ignored).
+- If `maxAgeMs` is set, drafts older than the TTL are ignored.
+
+With `debug: false`, Savior produces **no console output** under any circumstance.
+
+### Form identification
+
+Savior derives `formId` from `data-savior`, `data-savior-id`, or `form.id`.  
+If none is present, the form is ignored.
 
 ### SPA note: clearing is manual after success
 
-In SPAs, Savior cannot know if a request truly succeeded. After a successful submit, you must clear:
+In SPAs, Savior cannot know whether a request truly succeeded.  
+After a successful submit, you must clear the draft manually:
 
 ```js
 Savior.clearDraft(formId);
@@ -219,7 +233,12 @@ This is the conservative default.
 ```js
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const formId = form.getAttribute('data-savior-id') || 'contact';
+
+  const formId =
+    form.getAttribute('data-savior-id') ||
+    form.getAttribute('data-savior') ||
+    form.id;
+
   const ok = await submitToApi(new FormData(form));
 
   if (ok) Savior.clearDraft(formId);
@@ -228,14 +247,17 @@ form.addEventListener('submit', async (e) => {
 
 ### Multiple forms
 
-Use a clear `formId` per form (data attribute or explicit id) and keep `selector` narrow.
+Use a stable `formId` per form and keep `selector` narrow to avoid ambiguity.
 
 ### Driver override
 
 ```js
-import Savior, { LocalStorageDriver } from "savior";
+import Savior, { LocalStorageDriver } from '@zippers/savior';
 
 Savior.init({
-  driver: new LocalStorageDriver({ storageKeyPrefix: "myapp_", debug: false }),
+  driver: new LocalStorageDriver({
+    storageKeyPrefix: 'myapp_',
+    debug: false
+  }),
 });
 ```
