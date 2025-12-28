@@ -1,7 +1,7 @@
 // src/fields/FieldAdapterRegistry.js
 
 /**
- * FieldAdapterRegistry – Supported Field Types (v0.3.0)
+ * FieldAdapterRegistry – Supported Field Types
  *
  * Savior uses a pluggable adapter system to read/write field values safely.
  * Each adapter implements:
