@@ -41,13 +41,13 @@ describe('Savior - flaky driver (intermittent failures)', () => {
 
     const flakyDriver = createFlakyDriver();
 
-    const core = Savior.init({
+    const result = Savior.init({
       selector: 'form[data-savior]',
       debug: true,
       driver: flakyDriver,
     });
-
-    expect(core).toBeTruthy();
+    expect(result.ok).toBe(true);
+    const core = result.core;
 
     const input = form.querySelector('input[name="title"]');
 

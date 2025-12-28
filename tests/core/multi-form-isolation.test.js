@@ -20,11 +20,13 @@ describe('Savior – multi-form draft isolation', () => {
       </form>
     `);
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
     });
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     // Saisie uniquement dans A
     const emailA = formA.querySelector('input[name="emailA"]');
@@ -60,11 +62,13 @@ describe('Savior – multi-form draft isolation', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
     });
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const restoredEmailA = refreshedFormA.querySelector('input[name="emailA"]');
     const restoredMessageA = refreshedFormA.querySelector('textarea[name="messageA"]');
@@ -101,11 +105,13 @@ describe('Savior – multi-form draft isolation', () => {
       </form>
     `);
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
     });
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     // Saisie uniquement dans B
     const emailB = formB.querySelector('input[name="emailB"]');
@@ -140,11 +146,13 @@ describe('Savior – multi-form draft isolation', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
     });
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const restoredEmailA = refreshedFormA.querySelector('input[name="emailA"]');
     const restoredMessageA = refreshedFormA.querySelector('textarea[name="messageA"]');
@@ -181,11 +189,13 @@ describe('Savior – multi-form draft isolation', () => {
       </form>
     `);
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
     });
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     const emailA = formA.querySelector('input[name="emailA"]');
     const messageA = formA.querySelector('textarea[name="messageA"]');
@@ -226,11 +236,13 @@ describe('Savior – multi-form draft isolation', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
     });
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const restoredEmailA = refreshedFormA.querySelector('input[name="emailA"]');
     const restoredMessageA = refreshedFormA.querySelector('textarea[name="messageA"]');

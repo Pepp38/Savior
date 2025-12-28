@@ -20,13 +20,16 @@ describe('Savior – prefix / page isolation', () => {
 
     const page1Input = page1Form.querySelector('input[name="value"]');
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: 'savior:test:prefix:',
       pageId: 'page-1',
       saveDelayMs,
     });
+
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     page1Input.value = 'Page One Value';
     page1Input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -48,13 +51,19 @@ describe('Savior – prefix / page isolation', () => {
 
     const page2Input = page2Form.querySelector('input[name="value"]');
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: 'savior:test:prefix:',
       pageId: 'page-2',
       saveDelayMs,
     });
+
+    expect(result.ok).toBe(true);
+    core = result.core;
+
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     page2Input.value = 'Page Two Value';
     page2Input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -74,13 +83,15 @@ describe('Savior – prefix / page isolation', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: 'savior:test:prefix:',
       pageId: 'page-1',
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const r1 = refreshedPage1.querySelector('input[name="value"]');
     expect(r1.value).toBe('Page One Value');
@@ -98,13 +109,15 @@ describe('Savior – prefix / page isolation', () => {
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: 'savior:test:prefix:',
       pageId: 'page-2',
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const r2 = refreshedPage2.querySelector('input[name="value"]');
     expect(r2.value).toBe('Page Two Value');

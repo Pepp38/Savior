@@ -10,11 +10,13 @@ describe('Savior – password fields are never persisted', () => {
       </form>
     `);
 
-    const core = Savior.init({
+    const result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: 'savior:test:password:',
     });
+    expect(result.ok).toBe(true);
+    const core = result.core;
 
     const emailInput = form.querySelector('input[name="email"]');
     const passwordInput = form.querySelector('input[name="password"]');

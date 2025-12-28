@@ -21,12 +21,14 @@ describe('Savior – full lifecycle (save, restore, edit, resave, restore)', () 
     const titleV1 = formV1.querySelector('input[name="title"]');
     const bodyV1 = formV1.querySelector('textarea[name="body"]');
 
-    let core = Savior.init({
+    let result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    let core = result.core;
 
     titleV1.value = 'First title';
     bodyV1.value = 'First body';
@@ -49,12 +51,14 @@ describe('Savior – full lifecycle (save, restore, edit, resave, restore)', () 
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const titleRestoredV1 = formV2.querySelector('input[name="title"]');
     const bodyRestoredV1 = formV2.querySelector('textarea[name="body"]');
@@ -86,12 +90,14 @@ describe('Savior – full lifecycle (save, restore, edit, resave, restore)', () 
       </form>
     `);
 
-    core = Savior.init({
+    result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs,
     });
+    expect(result.ok).toBe(true);
+    core = result.core;
 
     const finalTitle = formFinal.querySelector('input[name="title"]');
     const finalBody = formFinal.querySelector('textarea[name="body"]');

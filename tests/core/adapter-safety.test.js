@@ -39,14 +39,15 @@ describe('Savior – adapter safety (no unhandled exceptions)', () => {
       </form>
     `);
 
-    const core = Savior.init({
+    const result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs: 200,
     });
 
-    expect(core).toBeTruthy();
+    expect(result.ok).toBe(true);
+    const core = result.core;
 
     const good = form.querySelector('input[name="good"]');
     const bad = form.querySelector('input[name="bad"]');
@@ -92,12 +93,15 @@ describe('Savior – adapter safety (no unhandled exceptions)', () => {
       </form>
     `);
 
-    const core = Savior.init({
+    const result = Savior.init({
       selector: 'form[data-savior]',
       debug: false,
       storageKeyPrefix: prefix,
       saveDelayMs: 200,
     });
+
+    expect(result.ok).toBe(true);
+    const core = result.core;
 
     const good = form.querySelector('input[name="good"]');
     const bad = form.querySelector('input[name="bad"]');
