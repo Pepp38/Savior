@@ -48,6 +48,21 @@ Savior exists to handle those boring, fragile edge cases consistently, so applic
 
 ---
 
+## Savior Core and SafeState Recovery
+
+Savior Core focuses on preventing common data loss through conservative autosave and restore.
+
+For failure scenarios autosave cannot safely resolve, Savior offers a dedicated recovery system:
+
+> **Savior SafeState Recovery**  
+> *Never lose a technically valid draft, even when autosave fails.*
+
+SafeState Recovery guarantees that only a technically valid application state can be restored after crashes or corrupted storage, and deliberately refuses to restore when certainty does not exist.
+
+Project site: https://zippers.dev
+
+---
+
 ## What it deliberately does NOT do
 
 - No backend
