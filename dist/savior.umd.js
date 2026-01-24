@@ -114,11 +114,26 @@
 
     /**
      * Restore the checked state from a boolean.
+     * Also supports checkbox groups saved as string[] (same name):
+     *   - value is an array of selected checkbox values
+     *   - each checkbox is checked if its value is included
      *
      * @param {HTMLInputElement} element
      * @param {unknown} value
      */
     writeValue(element, value) {
+      // Checkbox groups are restored group-aware in SaviorCore.
+      // If someone bypasses that logic, do nothing rather than applying partial state.
+      if (value && typeof value === 'object' && value.__type === 'checkboxGroup') {
+        return;
+      }
+
+      if (Array.isArray(value)) {
+        const v = element.value ?? 'on';
+        element.checked = value.includes(v);
+        return;
+      }
+
       element.checked = Boolean(value);
     }
   }
@@ -346,6 +361,156 @@
       this.driver = options.driver;
       this.saveDelayMs = options.saveDelayMs ?? 400;
       this.debug = options.debug ?? false;
+
+      // Behavior flags
+      this.clearOnSubmit = options.clearOnSubmit ?? true;
+      this.restoreOn = options.restoreOn === 'manual' ? 'manual' : 'init';
+      this.maxAgeMs =
+        typeof options.maxAgeMs === 'number' && Number.isFinite(options.maxAgeMs)
+          ? options.maxAgeMs
+          : undefined;
+
+      // Pending-clear behavior (conservative: never clear immediately on submit)
+      this._pendingClearByFormId = new Set();
+      this._lifecycleHandlersBound = false;
+      this._onPageHide = null;
+      this._onVisibilityChange = null;
+
+      // Lifecycle bookkeeping
+      this._bindingsByForm = new Map();
+      this._lastSerializedByFormId = new Map();
+    }
+
+    _ensureLifecycleHandlers() {
+      if (this._lifecycleHandlersBound) return;
+      this._lifecycleHandlersBound = true;
+
+      this._onPageHide = () => this._flushPendingClears('pagehide');
+      this._onVisibilityChange = () => {
+        try {
+          if (document.visibilityState === 'hidden') {
+            this._flushPendingClears('visibilitychange:hidden');
+          }
+        } catch {
+          // ignore
+        }
+      };
+
+      try {
+        window.addEventListener('pagehide', this._onPageHide);
+      } catch {
+        // ignore
+      }
+      try {
+        document.addEventListener('visibilitychange', this._onVisibilityChange);
+      } catch {
+        // ignore
+      }
+    }
+
+    _flushPendingClears(trigger) {
+      if (!this._pendingClearByFormId || this._pendingClearByFormId.size === 0) {
+        return;
+      }
+
+      for (const formId of this._pendingClearByFormId) {
+        this.logDebug(`Clearing draft for form "${formId}" on ${trigger}.`);
+        try {
+          this.driver.clear(formId);
+        } catch (err) {
+          this.logWarn(
+            `Driver.clear failed for form "${formId}":`,
+            err?.message || err
+          );
+        }
+      }
+
+      this._pendingClearByFormId.clear();
+    }
+
+    _determineCheckboxGroupMode(group) {
+      const values = group.map((cb) => cb.value ?? 'on');
+      const valuesAreUsable =
+        values.every((v) => typeof v === 'string' && v.length > 0) &&
+        new Set(values).size === group.length &&
+        !(new Set(values).size === 1 && values[0] === 'on');
+
+      if (valuesAreUsable) return 'value';
+
+      const ids = group.map((cb) => cb.id).filter(Boolean);
+      const idsAreUsable = ids.length === group.length && new Set(ids).size === group.length;
+      if (idsAreUsable) return 'id';
+
+      return 'index';
+    }
+
+    _buildCheckboxGroupPayload(group, mode) {
+      if (mode === 'value') {
+        const selected = [];
+        for (const cb of group) if (cb.checked) selected.push(cb.value ?? 'on');
+        return { __type: 'checkboxGroup', mode: 'value', selected };
+      }
+
+      if (mode === 'id') {
+        const selected = [];
+        for (const cb of group) if (cb.checked) selected.push(cb.id);
+        return { __type: 'checkboxGroup', mode: 'id', selected };
+      }
+
+      // mode: index
+      const selected = [];
+      for (let idx = 0; idx < group.length; idx++) {
+        if (group[idx].checked) selected.push(idx);
+      }
+      return { __type: 'checkboxGroup', mode: 'index', selected };
+    }
+
+    _restoreCheckboxGroup(group, savedValue, fieldName) {
+      // Legacy format: string[] of values (works only when values are meaningful)
+      if (Array.isArray(savedValue)) {
+        for (const cb of group) {
+          const v = cb.value ?? 'on';
+          cb.checked = savedValue.includes(v);
+        }
+        return { restored: true, mode: 'legacy' };
+      }
+
+      // New format
+      if (!savedValue || savedValue.__type !== 'checkboxGroup') {
+        return { restored: false };
+      }
+
+      const { mode, selected } = savedValue;
+      if (!Array.isArray(selected)) {
+        return { restored: false };
+      }
+
+      if (mode === 'value') {
+        for (const cb of group) {
+          const v = cb.value ?? 'on';
+          cb.checked = selected.includes(v);
+        }
+        return { restored: true, mode: 'value' };
+      }
+
+      if (mode === 'id') {
+        for (const cb of group) {
+          cb.checked = selected.includes(cb.id);
+        }
+        return { restored: true, mode: 'id' };
+      }
+
+      if (mode === 'index') {
+        for (let idx = 0; idx < group.length; idx++) {
+          group[idx].checked = selected.includes(idx);
+        }
+        this.logDebug(
+          `Checkbox group "${fieldName}" restored using index fallback (ambiguous config).`
+        );
+        return { restored: true, mode: 'index' };
+      }
+
+      return { restored: false };
     }
 
     logDebug(...args) {
@@ -355,7 +520,7 @@
 
     logWarn(...args) {
       if (!this.debug) return;
-      warn(...args);
+      console.warn('[Savior]', ...args);
     }
 
     /**
@@ -389,9 +554,33 @@
       }
 
       this.logDebug(`Attaching to form "${formId}".`);
-      this.restoreForm(formElement, formId);
-      this.wireInputEvents(formElement, formId);
-      this.wireSubmitEvent(formElement, formId);
+      if (this.restoreOn !== 'manual') {
+        this.restoreForm(formElement, formId);
+      }
+
+      // Ensure idempotency if attachToForm is called multiple times
+      if (this._bindingsByForm.has(formId)) {
+        this.logWarn(`Form "${formId}" is already attached. Skipping re-attach.`);
+        return;
+      }
+
+      const bindings = this._wireEvents(formElement, formId);
+      this._bindingsByForm.set(formId, bindings);
+    }
+
+    /**
+     * Restore drafts for all attached forms.
+     * Useful for dynamic forms (frameworks) where fields are not present at init.
+     * Fail-soft by design.
+     */
+    restore() {
+      for (const [formId, bindings] of this._bindingsByForm.entries()) {
+        try {
+          this.restoreForm(bindings.formElement, formId);
+        } catch {
+          // ignore
+        }
+      }
     }
 
     /**
@@ -427,12 +616,40 @@
         return;
       }
 
+      // Optional TTL: ignore stale drafts (do NOT auto-clear)
+      if (typeof this.maxAgeMs === 'number') {
+        const ts = storedDraft.timestampUtc;
+        const parsed = typeof ts === 'string' ? Date.parse(ts) : NaN;
+        if (Number.isFinite(parsed)) {
+          const ageMs = Date.now() - parsed;
+          if (ageMs > this.maxAgeMs) {
+            this.logDebug(
+              `Draft for form "${formId}" ignored (stale: ${ageMs}ms > ${this.maxAgeMs}ms).`
+            );
+            return;
+          }
+        }
+      }
+
       this.logDebug(`Restoring draft for form "${formId}".`, storedDraft);
 
       const elements = formElement.elements;
       if (!elements || !elements.length) {
         return;
       }
+
+      // Pre-index checkbox groups (same name) for group-aware restoration
+      const checkboxGroupsByName = new Map();
+      for (let i = 0; i < elements.length; i++) {
+        const el = elements[i];
+        if (!el?.name) continue;
+        if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+          const group = checkboxGroupsByName.get(el.name) ?? [];
+          group.push(el);
+          checkboxGroupsByName.set(el.name, group);
+        }
+      }
+      const handledCheckboxGroupNames = new Set();
 
       for (let i = 0; i < elements.length; i++) {
         const element = elements[i];
@@ -441,11 +658,41 @@
 
         if (!(fieldName in storedDraft.fields)) continue;
 
+        // Checkbox group support (same name)
+        if (element instanceof HTMLInputElement && element.type === 'checkbox') {
+          const group = checkboxGroupsByName.get(fieldName);
+          if (group && group.length > 1) {
+            if (handledCheckboxGroupNames.has(fieldName)) {
+              continue;
+            }
+            handledCheckboxGroupNames.add(fieldName);
+
+            const savedValue = storedDraft.fields[fieldName];
+            try {
+              this._restoreCheckboxGroup(group, savedValue, fieldName);
+            } catch (err) {
+              this.logWarn(
+                `Checkbox group restore failed for field "${fieldName}" in form "${formId}":`,
+                err?.message || err
+              );
+            }
+            continue;
+          }
+        }
+
         const adapter = getFieldAdapterForElement(element);
         if (!adapter) continue;
 
         const savedValue = storedDraft.fields[fieldName];
-        adapter.writeValue(element, savedValue);
+        try {
+          adapter.writeValue(element, savedValue);
+        } catch (err) {
+          this.logWarn(
+            `Adapter.writeValue failed for field "${fieldName}" in form "${formId}":`,
+            err?.message || err
+          );
+          continue;
+        }
       }
     }
 
@@ -454,7 +701,7 @@
      * @param {HTMLFormElement} formElement
      * @param {string} formId
      */
-    wireInputEvents(formElement, formId) {
+    _wireEvents(formElement, formId) {
       let saveTimeoutId = null;
 
       const scheduleSave = () => {
@@ -469,8 +716,32 @@
         }, this.saveDelayMs);
       };
 
+      const onSubmit = (event) => {
+        if (!this.clearOnSubmit) return;
+
+        // defaultPrevented may be set by another listener after ours.
+        // Using a microtask ensures we observe the final state.
+        const enqueue = typeof queueMicrotask === 'function'
+          ? queueMicrotask
+          : (cb) => Promise.resolve().then(cb);
+
+        enqueue(() => {
+          if (event?.defaultPrevented) {
+            this.logDebug(`Submit prevented for form "${formId}"; draft not cleared.`);
+            return;
+          }
+
+          this.logDebug(`Submit detected for form "${formId}"; marking pendingClear.`);
+          this._pendingClearByFormId.add(formId);
+          this._ensureLifecycleHandlers();
+        });
+      };
+
       formElement.addEventListener('input', scheduleSave);
       formElement.addEventListener('change', scheduleSave);
+      formElement.addEventListener('submit', onSubmit);
+
+      return { formElement, scheduleSave, onSubmit, getSaveTimeoutId: () => saveTimeoutId };
     }
 
     /**
@@ -487,6 +758,19 @@
         return;
       }
 
+      // Pre-index checkbox groups (same name)
+      const checkboxGroupsByName = new Map();
+      for (let i = 0; i < elements.length; i++) {
+        const el = elements[i];
+        if (!el?.name) continue;
+        if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+          const group = checkboxGroupsByName.get(el.name) ?? [];
+          group.push(el);
+          checkboxGroupsByName.set(el.name, group);
+        }
+      }
+      const handledCheckboxGroupNames = new Set();
+
       for (let i = 0; i < elements.length; i++) {
         const element = elements[i];
         const fieldName = element.name;
@@ -495,10 +779,40 @@
         // Do not persist passwords.
         if (element.type === 'password') continue;
 
+        // Checkbox group support (same name)
+        if (element instanceof HTMLInputElement && element.type === 'checkbox') {
+          const group = checkboxGroupsByName.get(fieldName);
+          if (group && group.length > 1) {
+            if (handledCheckboxGroupNames.has(fieldName)) {
+              continue;
+            }
+            handledCheckboxGroupNames.add(fieldName);
+
+            const mode = this._determineCheckboxGroupMode(group);
+            if (mode !== 'value') {
+              this.logDebug(
+                `Checkbox group "${fieldName}" saved using ${mode} mode (fallback).`
+              );
+            }
+            const payload = this._buildCheckboxGroupPayload(group, mode);
+            fields[fieldName] = payload;
+            continue;
+          }
+        }
+
         const adapter = getFieldAdapterForElement(element);
         if (!adapter) continue;
 
-        const value = adapter.readValue(element);
+        let value;
+        try {
+          value = adapter.readValue(element);
+        } catch (err) {
+          this.logWarn(
+            `Adapter.readValue failed for field "${fieldName}" in form "${formId}":`,
+            err?.message || err
+          );
+          continue;
+        }
 
         // Convention: undefined = "nothing to save" (e.g. unchecked radio).
         if (value === undefined) continue;
@@ -512,6 +826,24 @@
         fields
       };
 
+      // Skip identical writes (micro-optimization)
+      let serialized = '';
+      try {
+        serialized = JSON.stringify(draft);
+      } catch (err) {
+        // If serialization fails (very rare), fall back to attempting driver.save.
+        this.logWarn(`Draft serialization failed for form "${formId}":`, err?.message || err);
+      }
+
+      if (serialized) {
+        const last = this._lastSerializedByFormId.get(formId);
+        if (last === serialized) {
+          this.logDebug(`Skipping save for form "${formId}" (draft unchanged).`);
+          return;
+        }
+        this._lastSerializedByFormId.set(formId, serialized);
+      }
+
       this.logDebug(`Persisting draft for form "${formId}".`, draft);
       try {
         this.driver.save(formId, draft);
@@ -524,22 +856,57 @@
     }
 
     /**
-     * On submit, clear the stored draft for this form.
-     * @param {HTMLFormElement} formElement
-     * @param {string} formId
+     * Detach all listeners and clean internal state.
+     * Idempotent.
      */
-    wireSubmitEvent(formElement, formId) {
-      formElement.addEventListener('submit', () => {
-        this.logDebug(`Clearing draft for form "${formId}" on submit.`);
+    destroy() {
+      for (const [formId, binding] of this._bindingsByForm.entries()) {
+        const { formElement, scheduleSave, onSubmit, getSaveTimeoutId } = binding;
         try {
-          this.driver.clear(formId);
-        } catch (err) {
-          this.logWarn(
-            `Driver.clear failed for form "${formId}":`,
-            err?.message || err
-          );
+          formElement.removeEventListener('input', scheduleSave);
+          formElement.removeEventListener('change', scheduleSave);
+          formElement.removeEventListener('submit', onSubmit);
+        } catch {
+          // ignore
         }
-      });
+
+        const timeoutId = typeof getSaveTimeoutId === 'function' ? getSaveTimeoutId() : null;
+        if (timeoutId !== null) {
+          try {
+            clearTimeout(timeoutId);
+          } catch {
+            // ignore
+          }
+        }
+
+        this._lastSerializedByFormId.delete(formId);
+      }
+
+      this._bindingsByForm.clear();
+
+      // Global lifecycle listeners (pagehide / visibilitychange)
+      if (this._lifecycleHandlersBound) {
+        try {
+          window.removeEventListener('pagehide', this._onPageHide);
+        } catch {
+          // ignore
+        }
+        try {
+          document.removeEventListener('visibilitychange', this._onVisibilityChange);
+        } catch {
+          // ignore
+        }
+
+        this._lifecycleHandlersBound = false;
+        this._onPageHide = null;
+        this._onVisibilityChange = null;
+      }
+
+      try {
+        this._pendingClearByFormId?.clear?.();
+      } catch {
+        // ignore
+      }
     }
   }
 
@@ -572,7 +939,7 @@
 
     logWarn(...args) {
       if (!this.debug) return;
-      warn(...args);
+      console.warn('[Savior]', ...args);
     }
 
     checkStorageAvailable() {
@@ -656,7 +1023,7 @@
 
     logWarn(...args) {
       if (!this.debug) return;
-      warn(...args);
+      console.warn('[Savior]', ...args);
     }
 
     checkStorageAvailable() {
@@ -716,6 +1083,8 @@
     saveDelayMs: 400,
     debug: false,
     storageKeyPrefix: 'savior:',
+    clearOnSubmit: true,
+    restoreOn: 'init',
   };
 
   /**
@@ -739,6 +1108,19 @@
   }
 
   /**
+   * Returns the driver that will actually be used, based on provided options.
+   * The goal is to make "support" checks reflect reality (driver chosen),
+   * not just localStorage availability.
+   */
+  function getEffectiveDriver(options = {}) {
+    const effectiveOptions = {
+      ...DEFAULT_OPTIONS,
+      ...options,
+    };
+    return effectiveOptions.driver || createDefaultDriver(effectiveOptions);
+  }
+
+  /**
    * Log de debug centralisé.
    * Ne produit rien tant que debug === false.
    */
@@ -746,6 +1128,12 @@
     if (!options?.debug) return;
     console.debug('[Savior]', ...args);
   }
+
+  function logWarn(options, ...args) {
+    if (!options?.debug) return;
+    console.warn('[Savior]', ...args);
+  }
+
 
   /**
    * Fusionne options utilisateur et valeurs par défaut,
@@ -756,15 +1144,12 @@
       ...DEFAULT_OPTIONS,
       ...userOptions,
     };
-
-
     merged.debug = merged.debug === true;
 
     const warn = (...args) => {
       if (merged.debug !== true) return;
       console.warn('[Savior]', ...args);
     };
-
     // selector
     if (typeof merged.selector !== 'string' || !merged.selector.trim()) {
       warn('Invalid "selector" option. Falling back to default:',
@@ -792,6 +1177,26 @@
       merged.storageKeyPrefix = DEFAULT_OPTIONS.storageKeyPrefix;
     }
 
+    // clearOnSubmit
+    merged.clearOnSubmit = merged.clearOnSubmit !== false;
+
+    // restoreOn
+    if (merged.restoreOn !== 'manual') {
+      merged.restoreOn = 'init';
+    }
+
+    // maxAgeMs (optional)
+    if (merged.maxAgeMs !== undefined) {
+      if (
+        typeof merged.maxAgeMs !== 'number' ||
+        !Number.isFinite(merged.maxAgeMs) ||
+        merged.maxAgeMs < 0
+      ) {
+        warn('Invalid "maxAgeMs" option. Disabling TTL.');
+        delete merged.maxAgeMs;
+      }
+    }
+
     return merged;
   }
 
@@ -810,7 +1215,31 @@
      * Vérifie si l'environnement supporte les APIs nécessaires.
      * @returns {boolean}
      */
-    checkSupport() {
+    checkSupport(driverOrOptions) {
+      // If a driver is provided, trust its own availability flag when present.
+      const looksLikeDriver =
+        driverOrOptions &&
+        typeof driverOrOptions === 'object' &&
+        typeof driverOrOptions.save === 'function' &&
+        typeof driverOrOptions.load === 'function' &&
+        typeof driverOrOptions.clear === 'function';
+
+      if (looksLikeDriver) {
+        if (typeof driverOrOptions.isStorageAvailable === 'boolean') {
+          return driverOrOptions.isStorageAvailable;
+        }
+        return true;
+      }
+
+      if (driverOrOptions && typeof driverOrOptions === 'object') {
+        const driver = getEffectiveDriver(driverOrOptions);
+        if (typeof driver.isStorageAvailable === 'boolean') {
+          return driver.isStorageAvailable;
+        }
+        return true;
+      }
+
+      // Default behavior (LocalStorageDriver)
       return isLocalStorageSupported();
     },
 
@@ -833,25 +1262,36 @@
      * @returns {SaviorCore|null}
      */
     init(options = {}) {
-      if (!Savior.checkSupport()) {
-        if (options.debug) {
-          warn('Environment does not support required storage APIs. Initialization skipped.'
-          );
-        }
-        return null;
+      const normalized = normalizeInitOptions(options);
+      const driver = getEffectiveDriver(normalized);
+
+      // Driver availability (prefer driver's own flag when present)
+      const isDriverAvailable =
+        typeof driver?.isStorageAvailable === 'boolean' ? driver.isStorageAvailable : Savior.checkSupport(driver);
+
+      if (!isDriverAvailable) {
+        logWarn(normalized, 'Driver not available; init aborted.');
+        return { ok: false, reason: 'storage_unavailable' };
       }
 
-      const normalized = normalizeInitOptions(options);
-      const driver = normalized.driver || createDefaultDriver(normalized);
+      // Ensure we have a usable selector and at least one form
+      let forms = [];
+      try {
+        forms = Array.from(document.querySelectorAll(normalized.selector));
+      } catch (err) {
+        logWarn(normalized, 'Invalid selector or unsupported environment; init aborted.');
+        return { ok: false, reason: 'unsupported_environment' };
+      }
 
-      const core = new SaviorCore({
-        ...normalized,
-        driver,
-      });
+      if (forms.length === 0) {
+        logDebug(normalized, 'No forms found for selector', normalized.selector);
+        return { ok: false, reason: 'no_forms_found' };
+      }
 
+      const core = new SaviorCore({ ...normalized, driver });
       logDebug(normalized, 'Calling core.init() with selector', normalized.selector);
       core.init();
-      return core;
+      return { ok: true, core };
     },
 
     /**
@@ -865,14 +1305,8 @@
      */
     getDraft(formId, options = {}) {
       if (!formId) return null;
-      if (!Savior.checkSupport()) return null;
-
-      const effectiveOptions = {
-        ...DEFAULT_OPTIONS,
-        ...options,
-      };
-
-      const driver = effectiveOptions.driver || createDefaultDriver(effectiveOptions);
+      const driver = getEffectiveDriver(options);
+      if (!Savior.checkSupport(driver)) return null;
       return driver.load(formId);
     },
 
@@ -886,14 +1320,8 @@
      */
     clearDraft(formId, options = {}) {
       if (!formId) return;
-      if (!Savior.checkSupport()) return;
-
-      const effectiveOptions = {
-        ...DEFAULT_OPTIONS,
-        ...options,
-      };
-
-      const driver = effectiveOptions.driver || createDefaultDriver(effectiveOptions);
+      const driver = getEffectiveDriver(options);
+      if (!Savior.checkSupport(driver)) return;
       driver.clear(formId);
     },
 
