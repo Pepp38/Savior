@@ -50,14 +50,50 @@ Savior exists to handle those boring, fragile edge cases consistently, so applic
 
 ## Savior Core and SafeState Recovery
 
-Savior Core focuses on preventing common data loss through conservative autosave and restore.
+### Savior Core (this repository)
 
-For failure scenarios autosave cannot safely resolve, Savior offers a dedicated recovery system:
+Savior Core is a **mechanical autosave and restore engine**.
+
+It does one thing:
+
+- capture form input continuously
+- restore it verbatim after refresh, crash, or navigation
+
+Core makes **no attempt to interpret or validate state**.
+
+If a draft exists and is readable, it is restored as-is.
+
+Core:
+- does not judge correctness
+- does not attempt recovery
+- does not resolve ambiguity
+- ignores corrupted or unreadable data (fail-soft)
+
+This makes Core fast, predictable, and framework-agnostic — but intentionally naive.
+
+---
+
+### SafeState Recovery (separate module)
+
+Some failure modes require **judgment**, not mechanics.
+
+Examples:
+- partially written drafts
+- interrupted writes during crashes
+- externally mutated storage
+- structurally valid but semantically inconsistent state
+
+For these cases, Savior offers an optional recovery layer:
 
 > **Savior SafeState Recovery**  
-> *Never lose a technically valid draft, even when autosave fails.*
+> *Deterministic recovery when raw autosave is no longer trustworthy.*
 
-SafeState Recovery guarantees that only a technically valid application state can be restored after crashes or corrupted storage, and deliberately refuses to restore when certainty does not exist.
+SafeState:
+- validates draft structure and invariants
+- may refuse restoration when certainty does not exist
+- guarantees that **only a technically valid application state** can be recovered
+
+SafeState Recovery is **not included in Savior Core**.
 
 Project site: https://zippers.dev
 
@@ -93,32 +129,12 @@ Coverage includes:
 - **18 automated test suites** (Vitest)
 - **25 documented manual crash scenarios** (T01–T25)
 
-Tested scenarios include:
-
-- Corrupted or invalid storage
-- Flaky or failing storage drivers
-- Dynamic field insertion/removal
-- Multi-form pages and cloned forms
-- Stress input with rapid updates
-- External storage mutation during typing
-
-Across all scenarios, Savior maintained:
-
-- Zero unhandled exceptions
-- Stable restore behavior
-- Strict per-form isolation
-- Identical behavior across storage drivers
-
 ---
 
 ## Installation
 
 ```bash
 npm install @zippers/savior
-# or
-pnpm add @zippers/savior
-# or
-yarn add @zippers/savior
 ```
 
 ---
@@ -140,141 +156,8 @@ Savior.init({
 });
 ```
 
-That’s it.
-
----
-
-## Scope statement
-
-Savior does **one thing**:
-
-> Ensure users don’t lose typed input when forms fail in real life.
-
-Nothing more. Nothing less.
-
 ---
 
 *Savior is part of Zippers, a collection of small, focused tools.*
 
 https://zippers.dev
-
----
-
-## API Reference
-
-### `Savior.init(options?)`
-
-Initializes Savior and attaches to matching forms.
-
-Returns `{ ok: boolean, core?: SaviorCore, reason?: string }`.
-
-### `Savior.destroy()`
-
-Detaches listeners and stops all timers.
-
-### `Savior.getDraft(formId, options?)`
-
-Returns the stored draft for a given `formId`, or `null` if none exists or if the draft is stale.
-
-### `Savior.clearDraft(formId)`
-
-Clears the stored draft for the given `formId`.
-
-### `Savior.exportDraft(formId)`
-
-Exports the raw draft payload (useful for debugging or support tooling).
-
-### `Savior.checkSupport(driver?)`
-
-Returns `{ supported: boolean, reason?: string }` for the selected driver (or default).
-
-### Drivers
-
-- `LocalStorageDriver`
-- `SessionStorageDriver`
-
----
-
-## Options
-
-- `selector` (string): CSS selector used to find forms. Default: `form[data-savior]`
-- `saveDelayMs` (number): debounce delay before persisting input.
-- `debug` (boolean): enables warnings and debug logs when `true`. Default: `false` (silent).
-- `storageKeyPrefix` (string): key prefix used by storage drivers.
-- `clearOnSubmit` (boolean): conservative clear behavior on submit.
-- `restoreOn` (`"init"` | `"manual"`):
-  - `init` (default): restore drafts automatically on initialization
-  - `manual`: disable auto-restore and control restoration yourself
-- `maxAgeMs` (number): TTL for stored drafts. Stale drafts are ignored.
-
-If an option is invalid, Savior falls back to safe defaults.  
-With `debug: false`, this happens silently.
-
----
-
-## Production guarantees
-
-Savior is designed to be boring and conservative:
-
-- It **does not crash your app**: `init()` and restore paths are fail-soft.
-- It is **conservative with user data**: drafts are never cleared on ambiguous outcomes.
-- It **does not clear synchronously on submit**.
-- If a submit is prevented or fails, the draft remains.
-- Storage corruption is handled fail-soft (corrupted drafts are ignored).
-- If `maxAgeMs` is set, drafts older than the TTL are ignored.
-
-With `debug: false`, Savior produces **no console output** under any circumstance.
-
-### Form identification
-
-Savior derives `formId` from `data-savior`, `data-savior-id`, or `form.id`.  
-If none is present, the form is ignored.
-
-### SPA note: clearing is manual after success
-
-In SPAs, Savior cannot know whether a request truly succeeded.  
-After a successful submit, you must clear the draft manually:
-
-```js
-Savior.clearDraft(formId);
-```
-
-This is the conservative default.
-
----
-
-## Recipes
-
-### SPA submit handler
-
-```js
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const formId =
-    form.getAttribute('data-savior-id') ||
-    form.getAttribute('data-savior') ||
-    form.id;
-
-  const ok = await submitToApi(new FormData(form));
-
-  if (ok) Savior.clearDraft(formId);
-});
-```
-
-### Multiple forms
-
-Use a stable `formId` per form and keep `selector` narrow to avoid ambiguity.
-
-### Driver override
-
-```js
-import Savior, { LocalStorageDriver } from '@zippers/savior';
-
-Savior.init({
-  driver: new LocalStorageDriver({
-    storageKeyPrefix: 'myapp_',
-    debug: false
-  }),
-});
-```
