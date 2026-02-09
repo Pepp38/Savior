@@ -1,6 +1,8 @@
 import { SaviorCore } from './src/core/savior-core.js';
 import { LocalStorageDriver } from './src/drivers/localStorageDriver.js';
 import { SessionStorageDriver } from './src/drivers/sessionStorageDriver.js';
+import { MemoryDriver } from './src/drivers/memoryDriver.js';
+
 
 const DEFAULT_OPTIONS = {
   selector: 'form[data-savior]',
@@ -180,7 +182,7 @@ const Savior = {
    * @param {Object} options
    * @param {string} [options.selector]
    * @param {number} [options.saveDelayMs]
-   * @param {LocalStorageDriver|SessionStorageDriver} [options.driver]
+   * @param {LocalStorageDriver|SessionStorageDriver|MemoryDriver} [options.driver]
    * @param {boolean} [options.debug]
    * @param {string} [options.storageKeyPrefix]
    * @returns {SaviorCore|null}
@@ -222,7 +224,7 @@ const Savior = {
    * Récupère le draft brut pour un formId donné (ou null si absent / non supporté).
    * @param {string} formId
    * @param {Object} [options]
-   * @param {LocalStorageDriver|SessionStorageDriver} [options.driver]
+   * @param {LocalStorageDriver|SessionStorageDriver|MemoryDriver} [options.driver]
    * @param {boolean} [options.debug]
    * @param {string} [options.storageKeyPrefix]
    * @returns {Object|null}
@@ -238,7 +240,7 @@ const Savior = {
    * Efface le draft pour un formId donné.
    * @param {string} formId
    * @param {Object} [options]
-   * @param {LocalStorageDriver|SessionStorageDriver} [options.driver]
+   * @param {LocalStorageDriver|SessionStorageDriver|MemoryDriver} [options.driver]
    * @param {boolean} [options.debug]
    * @param {string} [options.storageKeyPrefix]
    */
@@ -262,6 +264,7 @@ const Savior = {
 
   LocalStorageDriver,
   SessionStorageDriver,
+  MemoryDriver,
 };
 
 export default Savior;
