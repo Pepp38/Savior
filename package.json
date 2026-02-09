@@ -1,6 +1,6 @@
 {
   "name": "@zippers/savior",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Ultra-light automatic form draft recovery for web forms.",
   "type": "module",
   "main": "./dist/savior.umd.js",
